@@ -10,10 +10,18 @@ interface ColorDetailsModalProps {
 
 export default function ColorDetailsModal({ color, isOpen, onClose, onColorChange }: ColorDetailsModalProps) {
   const [localColor, setLocalColor] = useState(color);
+  const [copiedFormat, setCopiedFormat] = useState<string | null>(null);
 
   useEffect(() => {
     setLocalColor(color);
   }, [color]);
+
+  const copyToClipboard = (text: string, format: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedFormat(format);
+      setTimeout(() => setCopiedFormat(null), 1500);
+    });
+  };
 
   if (!isOpen) return null;
 
@@ -52,24 +60,35 @@ export default function ColorDetailsModal({ color, isOpen, onClose, onColorChang
           />
         </div>
         <div className="grid grid-cols-2 gap-3 mb-3">
-          <div className="bg-gray-700 p-3 rounded-lg">
+          <div 
+            className="bg-gray-700 p-3 rounded-lg cursor-pointer transition duration-300 hover:bg-gray-600"
+            onClick={() => copyToClipboard(`${rgb.r}, ${rgb.g}, ${rgb.b}`, 'RGB')}
+          >
             <label className="block text-sm font-medium mb-1 text-blue-300">RGB</label>
             <p className="text-lg font-mono">
               <span className="text-red-400">{rgb.r}</span>,{' '}
               <span className="text-green-400">{rgb.g}</span>,{' '}
               <span className="text-blue-400">{rgb.b}</span>
             </p>
+            {copiedFormat === 'RGB' && <span className="text-xs text-green-400">Copied!</span>}
           </div>
-          <div className="bg-gray-700 p-3 rounded-lg">
+          <div 
+            className="bg-gray-700 p-3 rounded-lg cursor-pointer transition duration-300 hover:bg-gray-600"
+            onClick={() => copyToClipboard(`${hsl.h}°, ${hsl.s}%, ${hsl.l}%`, 'HSL')}
+          >
             <label className="block text-sm font-medium mb-1 text-blue-300">HSL</label>
             <p className="text-lg font-mono">
               <span className="text-purple-400">{hsl.h}°</span>,{' '}
               <span className="text-yellow-400">{hsl.s}%</span>,{' '}
               <span className="text-gray-400">{hsl.l}%</span>
             </p>
+            {copiedFormat === 'HSL' && <span className="text-xs text-green-400">Copied!</span>}
           </div>
         </div>
-        <div className="bg-gray-700 p-3 rounded-lg mb-4">
+        <div 
+          className="bg-gray-700 p-3 rounded-lg mb-4 cursor-pointer transition duration-300 hover:bg-gray-600"
+          onClick={() => copyToClipboard(`${cmyk.c}%, ${cmyk.m}%, ${cmyk.y}%, ${cmyk.k}%`, 'CMYK')}
+        >
           <label className="block text-sm font-medium mb-1 text-blue-300">CMYK</label>
           <p className="text-lg font-mono">
             <span className="text-cyan-400">{cmyk.c}%</span>,{' '}
@@ -77,6 +96,7 @@ export default function ColorDetailsModal({ color, isOpen, onClose, onColorChang
             <span className="text-yellow-400">{cmyk.y}%</span>,{' '}
             <span className="text-gray-400">{cmyk.k}%</span>
           </p>
+          {copiedFormat === 'CMYK' && <span className="text-xs text-green-400">Copied!</span>}
         </div>
         <button
           onClick={onClose}

@@ -93,7 +93,7 @@ export default function Controls({
       </div>
       <button
         onClick={generateNewPalette}
-        className="w-full px-4 py-3 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-700 transition duration-300 ease-in-out"
+        className="w-full px-4 py-3 bg-blue-600 text-white rounded-md font-semibold hover:bg-blue-700 transition duration-300 ease-in-out tracking-wide"
       >
         Generate New Palette
       </button>
