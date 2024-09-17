@@ -18,10 +18,10 @@ export default function Controls({
   generateNewPalette,
 }: ControlsProps) {
   return (
-    <div className="w-full max-w-3xl mb-8">
-      <div className="flex flex-wrap gap-4 mb-4">
+    <div className="w-full mb-12">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
         <div>
-          <label htmlFor="colorCount" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="colorCount" className="block text-sm font-medium text-gray-300 mb-2">
             Number of Colors
           </label>
           <input
@@ -31,11 +31,11 @@ export default function Controls({
             max="10"
             value={colorCount}
             onChange={(e) => setColorCount(parseInt(e.target.value))}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+            className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
         <div>
-          <label htmlFor="brightness" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="brightness" className="block text-sm font-medium text-gray-300 mb-2">
             Brightness
           </label>
           <input
@@ -45,11 +45,11 @@ export default function Controls({
             max="100"
             value={brightness}
             onChange={(e) => setBrightness(parseInt(e.target.value))}
-            className="mt-1 block w-full"
+            className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
           />
         </div>
         <div>
-          <label htmlFor="hueRange" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="hueRange" className="block text-sm font-medium text-gray-300 mb-2">
             Hue Range
           </label>
           <input
@@ -59,13 +59,13 @@ export default function Controls({
             max="360"
             value={hueRange[1]}
             onChange={(e) => setHueRange([hueRange[0], parseInt(e.target.value)])}
-            className="mt-1 block w-full"
+            className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
           />
         </div>
       </div>
       <button
         onClick={generateNewPalette}
-        className="w-full px-4 py-2 bg-indigo-500 text-white rounded"
+        className="w-full px-4 py-3 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-700 transition duration-300 ease-in-out"
       >
         Generate New Palette
       </button>

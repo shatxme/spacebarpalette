@@ -36,16 +36,16 @@ export default function ColorPalette({ palette }: ColorPaletteProps) {
   }
 
   return (
-    <div className="w-full max-w-3xl">
-      <div id="color-palette" className="flex flex-wrap justify-center gap-4 mb-8">
+    <div className="w-full">
+      <div id="color-palette" className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
         {palette.map((color, index) => (
-          <div key={index} className="w-32 h-32 rounded-lg shadow-md">
+          <div key={index} className="rounded-lg overflow-hidden shadow-lg">
             <div
-              className="w-full h-24 rounded-t-lg"
+              className="w-full h-32"
               style={{ backgroundColor: color }}
             ></div>
             <button
-              className="w-full h-8 bg-gray-100 text-sm font-mono"
+              className="w-full py-2 bg-gray-800 text-sm font-mono text-white hover:bg-gray-700 transition duration-300 ease-in-out"
               onClick={() => copyToClipboard(color, index)}
             >
               {copiedIndex === index ? 'Copied!' : color}
@@ -55,16 +55,16 @@ export default function ColorPalette({ palette }: ColorPaletteProps) {
       </div>
       <div className="flex justify-center gap-4">
         <button
-          className="px-4 py-2 bg-blue-500 text-white rounded"
+          className="px-6 py-3 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-700 transition duration-300 ease-in-out"
           onClick={downloadImage}
         >
-          Download Image
+          Export as PNG
         </button>
         <button
-          className="px-4 py-2 bg-green-500 text-white rounded"
+          className="px-6 py-3 bg-green-600 text-white rounded-md font-medium hover:bg-green-700 transition duration-300 ease-in-out"
           onClick={exportJSON}
         >
-          Export JSON
+          Export as JSON
         </button>
       </div>
     </div>
