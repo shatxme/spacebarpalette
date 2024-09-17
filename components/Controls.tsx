@@ -2,12 +2,12 @@ import { useState } from 'react';
 
 interface ControlsProps {
   colorCount: number;
-  setColorCount: React.Dispatch<React.SetStateAction<number>>;
+  setColorCount: (count: number) => void;
   brightness: number;
-  setBrightness: React.Dispatch<React.SetStateAction<number>>;
+  setBrightness: (brightness: number) => void;
   hueRange: number[];
-  setHueRange: React.Dispatch<React.SetStateAction<number[]>>;
-  generateNewPalette: () => void;
+  setHueRange: (range: number[]) => void;
+  onGenerateNewPalette: () => void;
 }
 
 export default function Controls({
@@ -17,16 +17,16 @@ export default function Controls({
   setBrightness,
   hueRange,
   setHueRange,
-  generateNewPalette,
+  onGenerateNewPalette,
 }: ControlsProps) {
   const [isFocused, setIsFocused] = useState(false);
 
   const incrementCount = () => {
-    setColorCount((prev) => Math.min(prev + 1, 10));
+    setColorCount(Math.min(colorCount + 1, 10));
   };
 
   const decrementCount = () => {
-    setColorCount((prev) => Math.max(prev - 1, 1));
+    setColorCount(Math.max(colorCount - 1, 1));
   };
 
   return (
@@ -92,7 +92,7 @@ export default function Controls({
         </div>
       </div>
       <button
-        onClick={generateNewPalette}
+        onClick={onGenerateNewPalette}
         className="w-full px-4 py-3 bg-blue-600 text-white rounded-md font-semibold hover:bg-blue-700 transition duration-300 ease-in-out tracking-wide"
       >
         Generate New Palette

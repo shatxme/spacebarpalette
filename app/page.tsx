@@ -48,7 +48,7 @@ export default function Home() {
           setBrightness={setBrightness}
           hueRange={hueRange}
           setHueRange={setHueRange}
-          generateNewPalette={generateNewPalette}
+          onGenerateNewPalette={generateNewPalette}
         />
         <ColorPalette 
           palette={palette} 
