@@ -49,6 +49,8 @@ export default function Home() {
           hueRange={hueRange}
           setHueRange={setHueRange}
           onGenerateNewPalette={generateNewPalette}
+          currentPalette={palette}
+          lockedColors={lockedColors}
         />
         <ColorPalette 
           palette={palette} 
