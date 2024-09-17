@@ -6,6 +6,7 @@ import { generatePalette } from './utils/colorUtils'
 
 export default function Home() {
   const [palette, setPalette] = useState<string[]>([])
+  const [lockedColors, setLockedColors] = useState<boolean[]>([])
   const [colorCount, setColorCount] = useState(5)
   const [brightness, setBrightness] = useState(50)
   const [hueRange, setHueRange] = useState([0, 360])
@@ -15,14 +16,30 @@ export default function Home() {
   }, [])
 
   const generateNewPalette = () => {
-    const newPalette = generatePalette(colorCount, brightness, hueRange)
+    const newPalette = generatePalette(colorCount, brightness, hueRange, palette, lockedColors)
     setPalette(newPalette)
+    if (lockedColors.length !== newPalette.length) {
+      setLockedColors(new Array(newPalette.length).fill(false))
+    }
     localStorage.setItem('palette', JSON.stringify(newPalette))
   }
 
+  const toggleLock = (index: number) => {
+    const newLockedColors = [...lockedColors]
+    newLockedColors[index] = !newLockedColors[index]
+    setLockedColors(newLockedColors)
+  }
+
+  const handleColorChange = (index: number, newColor: string) => {
+    const newPalette = [...palette];
+    newPalette[index] = newColor;
+    setPalette(newPalette);
+    localStorage.setItem('palette', JSON.stringify(newPalette));
+  };
+
   return (
     <main className="flex min-h-screen flex-col items-center justify-start p-8 bg-gray-900 text-white">
-      <h1 className="text-4xl font-bold mb-12">MaPal - Color Palette Generator</h1>
+      <h1 className="text-4xl font-bold mb-12">Color Palette Generator</h1>
       <div className="w-full max-w-3xl">
         <Controls
           colorCount={colorCount}
@@ -33,7 +50,12 @@ export default function Home() {
           setHueRange={setHueRange}
           generateNewPalette={generateNewPalette}
         />
-        <ColorPalette palette={palette} />
+        <ColorPalette 
+          palette={palette} 
+          lockedColors={lockedColors} 
+          onToggleLock={toggleLock}
+          onColorChange={handleColorChange}
+        />
       </div>
     </main>
   )
