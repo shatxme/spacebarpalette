@@ -1,10 +1,18 @@
 'use client'
-import { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ColorPalette from '../components/ColorPalette';
 import ColorDetailsModal from '../components/ColorDetailsModal';
-import { generatePalette } from './utils/colorUtils';
-import { SunIcon, SwatchIcon, PhotoIcon, CodeBracketIcon, ShareIcon } from '@heroicons/react/24/outline';
+import ColorAdjustmentSliders from '../components/ColorAdjustmentSliders';
+import { generatePalette, adjustPaletteHSL } from './utils/colorUtils';
+import { SunIcon, SwatchIcon, PhotoIcon, CodeBracketIcon, ShareIcon, AdjustmentsHorizontalIcon } from '@heroicons/react/24/outline';
 import html2canvas from 'html2canvas';
+
+interface AdjustmentValues {
+  h: number;
+  s: number;
+  l: number;
+  t: number;
+}
 
 const Logo = () => (
   <div className="flex items-center space-x-3">
@@ -21,19 +29,20 @@ const Logo = () => (
 
 export default function Home() {
   const [palette, setPalette] = useState<string[]>([]);
+  const [adjustedPalette, setAdjustedPalette] = useState<string[]>([]);
   const [lockedColors, setLockedColors] = useState<boolean[]>([]);
-  const [brightness, setBrightness] = useState(50);
   const [hueRange, setHueRange] = useState<[number, number]>([0, 360]);
   const [hueInputs, setHueInputs] = useState<[string, string]>(["0", "360"]);
   const exportRef = useRef<HTMLDivElement>(null);
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isAdjustmentOpen, setIsAdjustmentOpen] = useState(false);
+  const [cumulativeAdjustments, setCumulativeAdjustments] = useState<AdjustmentValues>({ h: 0, s: 0, l: 0, t: 0 });
 
   const sharePalette = useCallback(() => {
     const state = {
       palette,
       lockedColors,
-      brightness,
       hueRange
     };
     const stateString = btoa(JSON.stringify(state)); // Encode the state to base64
@@ -44,7 +53,7 @@ export default function Home() {
     }).catch(err => {
       console.error('Failed to copy share link: ', err);
     });
-  }, [palette, lockedColors, brightness, hueRange]);
+  }, [palette, lockedColors, hueRange]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -54,7 +63,6 @@ export default function Home() {
         const state = JSON.parse(atob(stateParam));
         setPalette(state.palette);
         setLockedColors(state.lockedColors);
-        setBrightness(state.brightness);
         setHueRange(state.hueRange);
       } catch (error) {
         console.error('Failed to parse shared state:', error);
@@ -65,15 +73,29 @@ export default function Home() {
     }
   }, []);
 
+  useEffect(() => {
+    const initialPalette = generatePalette(5, 50, [0, 360]);
+    console.log('Initial palette:', initialPalette); // Add this log
+    setPalette(initialPalette);
+  }, []);
+
   const generateNewPalette = useCallback(() => {
     setPalette(prevPalette => {
-      const newPalette = generatePalette(5, brightness, hueRange, prevPalette, lockedColors);
+      const newPalette = generatePalette(
+        5,
+        50,
+        [hueRange[0], hueRange[1]],
+        prevPalette,
+        lockedColors
+      );
       if (lockedColors.length !== newPalette.length) {
         setLockedColors(new Array(newPalette.length).fill(false));
       }
       return newPalette;
     });
-  }, [brightness, hueRange, lockedColors]);
+    setCumulativeAdjustments({ h: 0, s: 0, l: 0, t: 0 }); // Reset cumulative adjustments
+    setAdjustedPalette([]); // Clear adjusted palette
+  }, [hueRange, lockedColors]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -120,7 +142,6 @@ export default function Home() {
     const paletteData = {
       colors: palette,
       lockedColors: lockedColors,
-      brightness: brightness,
       hueRange: hueRange
     };
     const jsonString = JSON.stringify(paletteData, null, 2);
@@ -138,9 +159,11 @@ export default function Home() {
 
     const numValue = parseInt(value);
     if (!isNaN(numValue) && numValue >= 0 && numValue <= 360) {
-      const newHueRange = [...hueRange] as [number, number];
-      newHueRange[index] = numValue;
-      setHueRange(newHueRange);
+      setHueRange(prevRange => {
+        const newRange = [...prevRange] as [number, number];
+        newRange[index] = numValue;
+        return newRange;
+      });
     }
   };
 
@@ -152,18 +175,22 @@ export default function Home() {
         newInputs[index] = "0";
         return newInputs;
       });
-      const newHueRange = [...hueRange] as [number, number];
-      newHueRange[index] = 0;
-      setHueRange(newHueRange);
+      setHueRange(prevRange => {
+        const newRange = [...prevRange] as [number, number];
+        newRange[index] = 0;
+        return newRange;
+      });
     } else if (numValue > 360) {
       setHueInputs(prev => {
         const newInputs = [...prev] as [string, string];
         newInputs[index] = "360";
         return newInputs;
       });
-      const newHueRange = [...hueRange] as [number, number];
-      newHueRange[index] = 360;
-      setHueRange(newHueRange);
+      setHueRange(prevRange => {
+        const newRange = [...prevRange] as [number, number];
+        newRange[index] = 360;
+        return newRange;
+      });
     }
   };
 
@@ -176,61 +203,41 @@ export default function Home() {
     setIsModalOpen(false);
   }, []);
 
-  const handleColorChange = useCallback((newColor: string) => {
+  const handleColorChange = (newColor: string) => {
     setPalette(prevPalette => {
-      const index = prevPalette.indexOf(selectedColor!);
+      const newPalette = [...prevPalette];
+      const index = newPalette.indexOf(selectedColor!);
       if (index !== -1) {
-        const newPalette = [...prevPalette];
         newPalette[index] = newColor;
-        return newPalette;
       }
-      return prevPalette;
+      return newPalette;
     });
-  }, [selectedColor]);
+    setSelectedColor(newColor);
+  };
+
+  const handlePaletteChange = (newPalette: string[]) => {
+    setAdjustedPalette(newPalette);
+  };
+
+  const handleAdjustmentsChange = (newAdjustments: AdjustmentValues) => {
+    setCumulativeAdjustments(newAdjustments);
+    const newAdjustedPalette = adjustPaletteHSL(palette, newAdjustments);
+    setAdjustedPalette(newAdjustedPalette);
+  };
 
   return (
-    <main className="h-screen flex flex-col">
+    <main className="min-h-screen flex flex-col">
       <header className="bg-white shadow-sm p-4">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <Logo />
           <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2">
-              <SunIcon className="h-5 w-5 text-gray-400" />
-              <input
-                type="range"
-                min="0"
-                max="100"
-                value={brightness}
-                onChange={(e) => setBrightness(Number(e.target.value))}
-                className="w-24 h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-              />
-            </div>
-            <div className="flex items-center space-x-2">
-              <SwatchIcon className="h-5 w-5 text-gray-400" />
-              <input
-                type="text"
-                value={hueInputs[0]}
-                onChange={(e) => handleHueChange(0, e.target.value)}
-                onBlur={() => handleHueBlur(0)}
-                className="w-14 p-1 bg-gray-100 rounded text-sm text-gray-700"
-                placeholder="Min"
-              />
-              <input
-                type="text"
-                value={hueInputs[1]}
-                onChange={(e) => handleHueChange(1, e.target.value)}
-                onBlur={() => handleHueBlur(1)}
-                className="w-14 p-1 bg-gray-100 rounded text-sm text-gray-700"
-                placeholder="Max"
-              />
-            </div>
             <button 
               onClick={exportToPNG} 
               className="flex items-center space-x-1 p-1 hover:bg-gray-100 rounded" 
               title="Export as PNG"
             >
               <PhotoIcon className="h-5 w-5 text-gray-600" />
-              <span className="text-sm text-gray-600">PNG</span>
+              <span className="text-sm text-gray-600 hidden sm:inline">PNG</span>
             </button>
             <button 
               onClick={exportToJSON} 
@@ -238,7 +245,7 @@ export default function Home() {
               title="Export as JSON"
             >
               <CodeBracketIcon className="h-5 w-5 text-gray-600" />
-              <span className="text-sm text-gray-600">JSON</span>
+              <span className="text-sm text-gray-600 hidden sm:inline">JSON</span>
             </button>
             <button 
               onClick={sharePalette} 
@@ -246,13 +253,33 @@ export default function Home() {
               title="Share Palette"
             >
               <ShareIcon className="h-5 w-5 text-gray-600" />
-              <span className="text-sm text-gray-600">Share</span>
+              <span className="text-sm text-gray-600 hidden sm:inline">Share</span>
             </button>
+            <div className="relative">
+              <button 
+                onClick={() => setIsAdjustmentOpen(!isAdjustmentOpen)}
+                className="flex items-center space-x-1 p-1 hover:bg-gray-100 rounded" 
+                title="Adjust Colors"
+              >
+                <AdjustmentsHorizontalIcon className="h-5 w-5 text-gray-600" />
+                <span className="text-sm text-gray-600">Adjust</span>
+              </button>
+              {isAdjustmentOpen && (
+                <div className="absolute right-0 mt-2 w-64 bg-white shadow-lg rounded-lg overflow-hidden z-10">
+                  <ColorAdjustmentSliders
+                    palette={palette}
+                    onPaletteChange={handlePaletteChange}
+                    onAdjustmentsChange={handleAdjustmentsChange}
+                    initialAdjustments={cumulativeAdjustments}
+                  />
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </header>
       <ColorPalette
-        palette={palette}
+        palette={adjustedPalette.length > 0 ? adjustedPalette : palette}
         lockedColors={lockedColors}
         onToggleLock={toggleLock}
         onGenerateNewPalette={generateNewPalette}

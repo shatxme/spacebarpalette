@@ -1,16 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { hexToRgb, hexToHsl, hexToCmyk, getContrastColor } from '../app/utils/colorUtils';
-import { XMarkIcon, ClipboardDocumentIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, ClipboardDocumentIcon, PaintBrushIcon } from '@heroicons/react/24/outline';
 
 interface ColorDetailsModalProps {
   color: string;
   isOpen: boolean;
   onClose: () => void;
-  onColorChange: (newColor: string) => void;
+  onColorChange: (color: string) => void;
 }
 
 export default function ColorDetailsModal({ color, isOpen, onClose, onColorChange }: ColorDetailsModalProps) {
   const [localColor, setLocalColor] = useState(color);
+  const colorPickerRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setLocalColor(color);
@@ -32,6 +33,10 @@ export default function ColorDetailsModal({ color, isOpen, onClose, onColorChang
     onColorChange(newColor);
   };
 
+  const openColorPicker = () => {
+    colorPickerRef.current?.click();
+  };
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-gray-900 rounded-lg p-6 w-[320px] max-w-full text-white shadow-xl">
@@ -41,11 +46,25 @@ export default function ColorDetailsModal({ color, isOpen, onClose, onColorChang
             <XMarkIcon className="h-6 w-6" />
           </button>
         </div>
-        <div className="mb-4">
+        <div className="mb-4 relative">
           <div 
-            className="w-full h-20 rounded-md"
+            className="w-full h-32 rounded-md mb-2"
             style={{ backgroundColor: localColor }}
           ></div>
+          <button 
+            onClick={openColorPicker}
+            className="absolute bottom-4 right-4 bg-white bg-opacity-20 hover:bg-opacity-30 transition-colors duration-200 rounded-full p-2 flex items-center"
+          >
+            <PaintBrushIcon className="h-5 w-5 text-white mr-2" />
+            <span className="text-white font-semibold">Change Color</span>
+          </button>
+          <input
+            ref={colorPickerRef}
+            type="color"
+            value={localColor}
+            onChange={handleColorChange}
+            className="sr-only"
+          />
         </div>
         <div className="mb-4">
           <label htmlFor="hexInput" className="block text-sm font-medium mb-1 text-gray-300">Hex</label>
@@ -53,7 +72,10 @@ export default function ColorDetailsModal({ color, isOpen, onClose, onColorChang
             id="hexInput"
             type="text"
             value={localColor}
-            onChange={handleColorChange}
+            onChange={(e) => {
+              setLocalColor(e.target.value);
+              onColorChange(e.target.value);
+            }}
             className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
           />
         </div>

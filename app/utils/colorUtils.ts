@@ -1,12 +1,37 @@
+export interface AdjustmentValues {
+  h: number;  // Hue adjustment
+  s: number;  // Saturation adjustment
+  l: number;  // Lightness adjustment
+  t: number;  // Temperature adjustment
+}
+
 export function hslToHex(h: number, s: number, l: number): string {
-  l /= 100
-  const a = s * Math.min(l, 1 - l) / 100
-  const f = (n: number) => {
-    const k = (n + h / 30) % 12
-    const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1)
-    return Math.round(255 * color).toString(16).padStart(2, '0')
+  h /= 360;
+  s /= 100;
+  l /= 100;
+  let r, g, b;
+  if (s === 0) {
+    r = g = b = l; // achromatic
+  } else {
+    const hue2rgb = (p: number, q: number, t: number) => {
+      if (t < 0) t += 1;
+      if (t > 1) t -= 1;
+      if (t < 1 / 6) return p + (q - p) * 6 * t;
+      if (t < 1 / 2) return q;
+      if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+      return p;
+    };
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    const p = 2 * l - q;
+    r = hue2rgb(p, q, h + 1 / 3);
+    g = hue2rgb(p, q, h);
+    b = hue2rgb(p, q, h - 1 / 3);
   }
-  return `#${f(0)}${f(8)}${f(4)}`
+  const toHex = (x: number) => {
+    const hex = Math.round(x * 255).toString(16);
+    return hex.length === 1 ? '0' + hex : hex;
+  };
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }
 
 export function generatePalette(
@@ -20,30 +45,19 @@ export function generatePalette(
   const [minHue, maxHue] = hueRange;
 
   const generateColor = (hue: number) => {
-    // Constrain hue to the specified range
     const constrainedHue = minHue + (hue - minHue) % (maxHue - minHue);
-    
-    // Adjust saturation based on brightness
-    let saturation = Math.max(20, Math.min(100, 100 - brightness / 2));
-    
-    // Calculate lightness based on brightness
-    let lightness = brightness;
+    let saturation = Math.max(50, Math.min(100, 100 - brightness / 2));
+    let lightness = Math.max(30, Math.min(70, brightness)); // Ensure lightness is never too low or high
 
-    // Chance to produce very dark colors regardless of brightness
-    if (Math.random() < 0.15) { // 15% chance for darker color
-      lightness = Math.max(0, lightness - 30);
-      saturation = Math.min(100, saturation + 20);
-    }
-
-    // Add some randomness to saturation and lightness
+    // Add some randomness
     saturation += (Math.random() * 20 - 10);
     lightness += (Math.random() * 20 - 10);
 
     // Ensure values are within valid ranges
     saturation = Math.max(0, Math.min(100, saturation));
-    lightness = Math.max(0, Math.min(100, lightness));
+    lightness = Math.max(20, Math.min(80, lightness)); // Further restrict lightness range
 
-    return hslToHex(constrainedHue % 360, saturation, lightness);
+    return { h: constrainedHue % 360, s: saturation, l: lightness };
   };
 
   const goldenRatio = 0.618033988749895;
@@ -56,7 +70,8 @@ export function generatePalette(
       // Generate a new color
       hue = (hue + goldenRatio) % 1;
       const newHue = minHue + hue * (maxHue - minHue);
-      palette.push(generateColor(newHue));
+      const { h, s, l } = generateColor(newHue);
+      palette.push(hslToHex(h, s, l));
     }
   }
 
@@ -84,17 +99,21 @@ export function hexToRgb(hex: string) {
 }
 
 export function hexToHsl(hex: string): { h: number; s: number; l: number } {
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
+  // Remove the hash if it exists
+  hex = hex.replace(/^#/, '');
 
-  const max = Math.max(r, g, b), min = Math.min(r, g, b);
-  let h, s;
+  // Parse the hex values
+  const r = parseInt(hex.slice(0, 2), 16) / 255;
+  const g = parseInt(hex.slice(2, 4), 16) / 255;
+  const b = parseInt(hex.slice(4, 6), 16) / 255;
+
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  let h = 0;
+  let s = 0;
   const l = (max + min) / 2;
 
-  if (max === min) {
-    h = s = 0;
-  } else {
+  if (max !== min) {
     const d = max - min;
     s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
     switch (max) {
@@ -102,10 +121,14 @@ export function hexToHsl(hex: string): { h: number; s: number; l: number } {
       case g: h = (b - r) / d + 2; break;
       case b: h = (r - g) / d + 4; break;
     }
-    h! /= 6;
+    h /= 6;
   }
 
-  return { h: Math.round(h! * 360), s: Math.round(s * 100), l: Math.round(l * 100) };
+  return {
+    h: Math.round(h * 360),
+    s: Math.round(s * 100),
+    l: Math.round(l * 100)
+  };
 }
 
 export function hexToCmyk(hex: string) {
@@ -160,4 +183,25 @@ export function getColorName(hex: string): string {
   }
 
   return closestColor;
+}
+
+export function adjustPaletteHSL(palette: string[], adjustments: AdjustmentValues): string[] {
+  return palette.map(color => {
+    let { h, s, l } = hexToHsl(color);
+
+    // Apply hue adjustment
+    h = (h + adjustments.h + 360) % 360;
+
+    // Apply saturation adjustment
+    s = Math.max(0, Math.min(100, s + adjustments.s));
+
+    // Apply lightness adjustment
+    l = Math.max(0, Math.min(100, l + adjustments.l));
+
+    // Apply temperature adjustment
+    const tempShift = adjustments.t * 0.6; // Scale -100 to 100 to -60 to 60 degree shift
+    h = (h + tempShift + 360) % 360;
+
+    return hslToHex(h, s, l);
+  });
 }
