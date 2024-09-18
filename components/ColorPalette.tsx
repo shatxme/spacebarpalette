@@ -38,7 +38,18 @@ export default function ColorPalette({ palette, lockedColors, onToggleLock, onCo
   const downloadImage = async () => {
     const element = document.getElementById('color-palette')
     if (element) {
-      const dataUrl = await toPng(element)
+      // Temporarily hide lock icons and make background transparent
+      const lockIcons = element.querySelectorAll('.absolute.top-2.right-2')
+      lockIcons.forEach(icon => (icon as HTMLElement).style.display = 'none')
+      const originalBackground = element.style.background
+      element.style.background = 'transparent'
+
+      const dataUrl = await toPng(element, { backgroundColor: 'transparent' })
+
+      // Restore lock icons and original background
+      lockIcons.forEach(icon => (icon as HTMLElement).style.display = '')
+      element.style.background = originalBackground
+
       const link = document.createElement('a')
       link.download = 'color-palette.png'
       link.href = dataUrl

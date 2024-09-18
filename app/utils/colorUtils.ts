@@ -18,45 +18,41 @@ export function generatePalette(
 ): string[] {
   const palette: string[] = [];
   const [minHue, maxHue] = hueRange;
-  const baseHue = minHue + Math.random() * (maxHue - minHue);
 
-  const generateColor = (hue: number, index: number) => {
-    let saturation = 70 + Math.random() * 30; // 70-100
-    let lightness = 40 + (brightness / 100) * 20; // 40-60
+  const generateColor = (hue: number) => {
+    // Constrain hue to the specified range
+    const constrainedHue = minHue + (hue - minHue) % (maxHue - minHue);
+    
+    // Adjust saturation based on brightness
+    let saturation = Math.max(20, Math.min(100, 100 - brightness/2 + (Math.random() * 20 - 10)));
+    
+    // Calculate base lightness
+    let baseLightness = brightness;
+    
+    // Introduce variation to lightness
+    let lightnessVariation = Math.random() * 50 - 25; // -25 to +25
+    let lightness = Math.max(0, Math.min(100, baseLightness + lightnessVariation));
 
-    // Randomly decide to make this color very dark or very light
-    const rand = Math.random();
-    if (rand < 0.15) { // 15% chance for very dark color
-      lightness = 10 + Math.random() * 10; // 10-20
-      saturation = 0 + Math.random() * 20; // 0-20
-    } else if (rand > 0.85) { // 15% chance for very light color
-      lightness = 90 + Math.random() * 10; // 90-100
-      saturation = 0 + Math.random() * 20; // 0-20
+    // Chance to produce very dark colors regardless of brightness
+    if (Math.random() < 0.15) { // 15% chance for darker color
+      lightness = Math.max(0, lightness - 50);
+      saturation = Math.max(0, saturation - 20);
     }
 
-    return hslToHex(hue % 360, saturation, lightness);
+    return hslToHex(constrainedHue % 360, saturation, lightness);
   };
 
+  const goldenRatio = 0.618033988749895;
+  let hue = Math.random();
   for (let i = 0; i < count; i++) {
     if (lockedColors[i] && currentPalette[i]) {
+      // Keep the locked color
       palette.push(currentPalette[i]);
     } else {
-      const hueOffset = i * (360 / count); // Distribute colors evenly
-      const hue = baseHue + hueOffset;
-      palette.push(generateColor(hue, i));
-    }
-  }
-
-  // Ensure at least one very dark and one very light color
-  let hasDark = palette.some(color => isColorDark(color));
-  let hasLight = palette.some(color => isColorLight(color));
-
-  if (!hasDark || !hasLight) {
-    const indexToReplace = Math.floor(Math.random() * count);
-    if (!hasDark) {
-      palette[indexToReplace] = hslToHex(baseHue, 10, 10); // Very dark
-    } else {
-      palette[indexToReplace] = hslToHex(baseHue, 10, 95); // Very light
+      // Generate a new color
+      hue = (hue + goldenRatio) % 1;
+      const newHue = minHue + hue * (maxHue - minHue);
+      palette.push(generateColor(newHue));
     }
   }
 
@@ -126,3 +122,4 @@ export function getContrastColor(hexColor: string): string {
   const brightness = (rgb.r * 299 + rgb.g * 587 + rgb.b * 114) / 1000;
   return brightness > 128 ? '#000000' : '#FFFFFF';
 }
+
