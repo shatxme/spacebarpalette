@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { toPng } from 'html-to-image'
 import { LockClosedIcon, LockOpenIcon } from '@heroicons/react/24/solid'
 import ColorDetailsModal from './ColorDetailsModal'
+import { generateShareableUrl } from '../app/utils/shareUtils';
 
 interface ColorPaletteProps {
   palette: string[]
@@ -77,6 +78,15 @@ export default function ColorPalette({ palette, lockedColors, onToggleLock, onCo
     }
   }
 
+  const handleShare = () => {
+    const shareableUrl = generateShareableUrl(palette, lockedColors);
+    navigator.clipboard.writeText(shareableUrl).then(() => {
+      alert('Shareable link copied to clipboard!');
+    }).catch(err => {
+      console.error('Failed to copy: ', err);
+    });
+  };
+
   return (
     <div className="w-full">
       <div id="color-palette" className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
@@ -116,6 +126,14 @@ export default function ColorPalette({ palette, lockedColors, onToggleLock, onCo
           onClick={exportJSON}
         >
           Export as JSON
+        </button>
+      </div>
+      <div className="mt-4 flex justify-center space-x-4">
+        <button 
+          onClick={handleShare} 
+          className="px-4 py-2 bg-gray-700 text-gray-200 rounded-md border border-gray-600 hover:bg-gray-600 hover:text-white transition-colors duration-300"
+        >
+          Share Palette
         </button>
       </div>
       {selectedColorIndex !== null && (

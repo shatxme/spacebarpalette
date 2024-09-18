@@ -1,19 +1,38 @@
 'use client'
 import { useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import ColorPalette from '../components/ColorPalette'
 import Controls from '../components/Controls'
 import { generatePalette } from './utils/colorUtils'
 
-export default function Home() {
+interface HomeProps {
+  initialSharedId?: string
+}
+
+export default function Home({ initialSharedId }: HomeProps) {
   const [palette, setPalette] = useState<string[]>([])
   const [lockedColors, setLockedColors] = useState<boolean[]>([])
   const [colorCount, setColorCount] = useState(5)
   const [brightness, setBrightness] = useState(50)
   const [hueRange, setHueRange] = useState([0, 360])
+  const searchParams = useSearchParams();
 
   useEffect(() => {
-    generateNewPalette()
-  }, [])
+    const shared = searchParams.get('shared');
+    if (shared) {
+      try {
+        const decodedData = JSON.parse(atob(shared));
+        setPalette(decodedData.map((item: { color: string }) => item.color));
+        setLockedColors(decodedData.map((item: { locked: boolean }) => item.locked));
+      } catch (error) {
+        console.error('Failed to parse shared data:', error);
+        // Fallback to generating a new palette
+        generateNewPalette();
+      }
+    } else {
+      generateNewPalette();
+    }
+  }, [searchParams]);
 
   const generateNewPalette = () => {
     const newPalette = generatePalette(colorCount, brightness, hueRange, palette, lockedColors)
