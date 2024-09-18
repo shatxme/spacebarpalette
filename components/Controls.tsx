@@ -1,7 +1,6 @@
 import React from 'react'
 import { SunIcon, MoonIcon } from '@heroicons/react/24/solid'
 import { generatePalette } from '../app/utils/colorUtils';
-import { MinusIcon, PlusIcon } from '@heroicons/react/24/solid';
 
 interface ControlsProps {
   colorCount: number;
