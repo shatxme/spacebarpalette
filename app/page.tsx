@@ -1,15 +1,11 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import ColorPalette from '../components/ColorPalette'
 import Controls from '../components/Controls'
 import { generatePalette } from './utils/colorUtils'
 
-interface HomeProps {
-  initialSharedId?: string
-}
-
-export default function Home({ initialSharedId }: HomeProps) {
+function PaletteContent() {
   const [palette, setPalette] = useState<string[]>([])
   const [lockedColors, setLockedColors] = useState<boolean[]>([])
   const [colorCount, setColorCount] = useState(5)
@@ -18,7 +14,7 @@ export default function Home({ initialSharedId }: HomeProps) {
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    const shared = searchParams.get('shared');
+    const shared = searchParams?.get('shared');
     if (shared) {
       try {
         const decodedData = JSON.parse(atob(shared));
@@ -57,26 +53,36 @@ export default function Home({ initialSharedId }: HomeProps) {
   };
 
   return (
+    <>
+      <Controls
+        colorCount={colorCount}
+        setColorCount={setColorCount}
+        brightness={brightness}
+        setBrightness={setBrightness}
+        hueRange={hueRange}
+        setHueRange={setHueRange}
+        onGenerateNewPalette={generateNewPalette}
+        currentPalette={palette}
+        lockedColors={lockedColors}
+      />
+      <ColorPalette 
+        palette={palette} 
+        lockedColors={lockedColors} 
+        onToggleLock={toggleLock}
+        onColorChange={handleColorChange}
+      />
+    </>
+  );
+}
+
+export default function Home() {
+  return (
     <main className="flex min-h-screen flex-col items-center justify-start p-8 bg-gray-900 text-white">
       <h1 className="text-5xl font-bold mb-16">maPal - Color Palette Generator</h1>
       <div className="w-full max-w-6xl"> {/* Increased max-width */}
-        <Controls
-          colorCount={colorCount}
-          setColorCount={setColorCount}
-          brightness={brightness}
-          setBrightness={setBrightness}
-          hueRange={hueRange}
-          setHueRange={setHueRange}
-          onGenerateNewPalette={generateNewPalette}
-          currentPalette={palette}
-          lockedColors={lockedColors}
-        />
-        <ColorPalette 
-          palette={palette} 
-          lockedColors={lockedColors} 
-          onToggleLock={toggleLock}
-          onColorChange={handleColorChange}
-        />
+        <Suspense fallback={<div>Loading...</div>}>
+          <PaletteContent />
+        </Suspense>
       </div>
     </main>
   )

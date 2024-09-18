@@ -24,20 +24,24 @@ export function generatePalette(
     const constrainedHue = minHue + (hue - minHue) % (maxHue - minHue);
     
     // Adjust saturation based on brightness
-    let saturation = Math.max(20, Math.min(100, 100 - brightness/2 + (Math.random() * 20 - 10)));
+    let saturation = Math.max(20, Math.min(100, 100 - brightness / 2));
     
-    // Calculate base lightness
-    let baseLightness = brightness;
-    
-    // Introduce variation to lightness
-    let lightnessVariation = Math.random() * 50 - 25; // -25 to +25
-    let lightness = Math.max(0, Math.min(100, baseLightness + lightnessVariation));
+    // Calculate lightness based on brightness
+    let lightness = brightness;
 
     // Chance to produce very dark colors regardless of brightness
     if (Math.random() < 0.15) { // 15% chance for darker color
-      lightness = Math.max(0, lightness - 50);
-      saturation = Math.max(0, saturation - 20);
+      lightness = Math.max(0, lightness - 30);
+      saturation = Math.min(100, saturation + 20);
     }
+
+    // Add some randomness to saturation and lightness
+    saturation += (Math.random() * 20 - 10);
+    lightness += (Math.random() * 20 - 10);
+
+    // Ensure values are within valid ranges
+    saturation = Math.max(0, Math.min(100, saturation));
+    lightness = Math.max(0, Math.min(100, lightness));
 
     return hslToHex(constrainedHue % 360, saturation, lightness);
   };
@@ -59,15 +63,16 @@ export function generatePalette(
   return palette;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function isColorDark(hex: string): boolean {
   const rgb = hexToRgb(hex);
   const brightness = (rgb.r * 299 + rgb.g * 587 + rgb.b * 114) / 1000;
   return brightness < 128;
 }
 
-function isColorLight(hex: string): boolean {
-  return !isColorDark(hex);
-}
+// const isColorLight = (color: string): boolean => {
+//     // ... function implementation ...
+// };
 
 export function hexToRgb(hex: string) {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
@@ -79,12 +84,13 @@ export function hexToRgb(hex: string) {
 }
 
 export function hexToHsl(hex: string): { h: number; s: number; l: number } {
-  let { r, g, b } = hexToRgb(hex);
-  r /= 255;
-  g /= 255;
-  b /= 255;
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+
   const max = Math.max(r, g, b), min = Math.min(r, g, b);
-  let h, s, l = (max + min) / 2;
+  let h, s;
+  const l = (max + min) / 2;
 
   if (max === min) {
     h = s = 0;
@@ -103,7 +109,7 @@ export function hexToHsl(hex: string): { h: number; s: number; l: number } {
 }
 
 export function hexToCmyk(hex: string) {
-  let { r, g, b } = hexToRgb(hex);
+  const { r, g, b } = hexToRgb(hex);
   let c = 1 - (r / 255);
   let m = 1 - (g / 255);
   let y = 1 - (b / 255);
@@ -122,4 +128,3 @@ export function getContrastColor(hexColor: string): string {
   const brightness = (rgb.r * 299 + rgb.g * 587 + rgb.b * 114) / 1000;
   return brightness > 128 ? '#000000' : '#FFFFFF';
 }
-
