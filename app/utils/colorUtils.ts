@@ -128,3 +128,36 @@ export function getContrastColor(hexColor: string): string {
   const brightness = (rgb.r * 299 + rgb.g * 587 + rgb.b * 114) / 1000;
   return brightness > 128 ? '#000000' : '#FFFFFF';
 }
+
+export function getColorName(hex: string): string {
+  const colors: { [key: string]: string } = {
+    '#FF0000': 'Red', '#00FF00': 'Green', '#0000FF': 'Blue',
+    '#FFFF00': 'Yellow', '#FF00FF': 'Magenta', '#00FFFF': 'Cyan',
+    '#800000': 'Maroon', '#008000': 'Green', '#000080': 'Navy',
+    '#808000': 'Olive', '#800080': 'Purple', '#008080': 'Teal',
+    '#FFA500': 'Orange', '#FFC0CB': 'Pink', '#A52A2A': 'Brown',
+    '#808080': 'Gray', '#FFFFFF': 'White', '#000000': 'Black'
+  };
+
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+
+  let minDistance = Infinity;
+  let closestColor = '';
+
+  for (const [colorHex, colorName] of Object.entries(colors)) {
+    const cr = parseInt(colorHex.slice(1, 3), 16);
+    const cg = parseInt(colorHex.slice(3, 5), 16);
+    const cb = parseInt(colorHex.slice(5, 7), 16);
+
+    const distance = Math.sqrt((r - cr) ** 2 + (g - cg) ** 2 + (b - cb) ** 2);
+
+    if (distance < minDistance) {
+      minDistance = distance;
+      closestColor = colorName;
+    }
+  }
+
+  return closestColor;
+}

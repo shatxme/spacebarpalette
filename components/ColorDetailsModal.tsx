@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { hexToRgb, hexToHsl, hexToCmyk, getContrastColor } from '../app/utils/colorUtils';
+import { XMarkIcon, ClipboardDocumentIcon } from '@heroicons/react/24/outline';
 
 interface ColorDetailsModalProps {
   color: string;
@@ -10,17 +11,13 @@ interface ColorDetailsModalProps {
 
 export default function ColorDetailsModal({ color, isOpen, onClose, onColorChange }: ColorDetailsModalProps) {
   const [localColor, setLocalColor] = useState(color);
-  const [copiedFormat, setCopiedFormat] = useState<string | null>(null);
 
   useEffect(() => {
     setLocalColor(color);
   }, [color]);
 
-  const copyToClipboard = (text: string, format: string) => {
-    navigator.clipboard.writeText(text).then(() => {
-      setCopiedFormat(format);
-      setTimeout(() => setCopiedFormat(null), 1500);
-    });
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
   };
 
   if (!isOpen) return null;
@@ -28,7 +25,6 @@ export default function ColorDetailsModal({ color, isOpen, onClose, onColorChang
   const rgb = hexToRgb(localColor);
   const hsl = hexToHsl(localColor);
   const cmyk = hexToCmyk(localColor);
-  const contrastColor = getContrastColor(localColor);
 
   const handleColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newColor = e.target.value;
@@ -38,72 +34,49 @@ export default function ColorDetailsModal({ color, isOpen, onClose, onColorChang
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-gray-800 rounded-lg p-6 w-[420px] max-w-full text-white">
-        <h2 className="text-2xl font-bold mb-4">Color Details</h2>
+      <div className="bg-gray-900 rounded-lg p-6 w-[320px] max-w-full text-white shadow-xl">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-bold">Color Details</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-white">
+            <XMarkIcon className="h-6 w-6" />
+          </button>
+        </div>
         <div className="mb-4">
           <div 
-            className="w-full h-24 rounded"
-            style={{ 
-              backgroundColor: localColor,
-              border: `2px solid ${contrastColor}`
-            }}
+            className="w-full h-20 rounded-md"
+            style={{ backgroundColor: localColor }}
           ></div>
         </div>
         <div className="mb-4">
-          <label htmlFor="hexInput" className="block text-sm font-medium mb-1">Hex</label>
+          <label htmlFor="hexInput" className="block text-sm font-medium mb-1 text-gray-300">Hex</label>
           <input
             id="hexInput"
             type="text"
             value={localColor}
             onChange={handleColorChange}
-            className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
+            className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
           />
         </div>
-        <div className="grid grid-cols-2 gap-3 mb-3">
-          <div 
-            className="bg-gray-700 p-3 rounded-lg cursor-pointer transition duration-300 hover:bg-gray-600"
-            onClick={() => copyToClipboard(`${rgb.r}, ${rgb.g}, ${rgb.b}`, 'RGB')}
-          >
-            <label className="block text-sm font-medium mb-1 text-blue-300">RGB</label>
-            <p className="text-lg font-mono">
-              <span className="text-red-400">{rgb.r}</span>,{' '}
-              <span className="text-green-400">{rgb.g}</span>,{' '}
-              <span className="text-blue-400">{rgb.b}</span>
-            </p>
-            {copiedFormat === 'RGB' && <span className="text-xs text-green-400">Copied!</span>}
-          </div>
-          <div 
-            className="bg-gray-700 p-3 rounded-lg cursor-pointer transition duration-300 hover:bg-gray-600"
-            onClick={() => copyToClipboard(`${hsl.h}°, ${hsl.s}%, ${hsl.l}%`, 'HSL')}
-          >
-            <label className="block text-sm font-medium mb-1 text-blue-300">HSL</label>
-            <p className="text-lg font-mono">
-              <span className="text-purple-400">{hsl.h}°</span>,{' '}
-              <span className="text-yellow-400">{hsl.s}%</span>,{' '}
-              <span className="text-gray-400">{hsl.l}%</span>
-            </p>
-            {copiedFormat === 'HSL' && <span className="text-xs text-green-400">Copied!</span>}
-          </div>
+        <div className="space-y-2">
+          {[
+            { label: 'RGB', value: `${rgb.r}, ${rgb.g}, ${rgb.b}` },
+            { label: 'HSL', value: `${hsl.h}°, ${hsl.s}%, ${hsl.l}%` },
+            { label: 'CMYK', value: `${cmyk.c}%, ${cmyk.m}%, ${cmyk.y}%, ${cmyk.k}%` }
+          ].map((item) => (
+            <div key={item.label} className="flex items-center justify-between bg-gray-800 p-2 rounded-md">
+              <span className="text-sm font-medium text-gray-300">{item.label}</span>
+              <div className="flex items-center space-x-2">
+                <span className="text-sm font-mono">{item.value}</span>
+                <button
+                  onClick={() => copyToClipboard(item.value)}
+                  className="text-gray-400 hover:text-white"
+                >
+                  <ClipboardDocumentIcon className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
-        <div 
-          className="bg-gray-700 p-3 rounded-lg mb-4 cursor-pointer transition duration-300 hover:bg-gray-600"
-          onClick={() => copyToClipboard(`${cmyk.c}%, ${cmyk.m}%, ${cmyk.y}%, ${cmyk.k}%`, 'CMYK')}
-        >
-          <label className="block text-sm font-medium mb-1 text-blue-300">CMYK</label>
-          <p className="text-lg font-mono">
-            <span className="text-cyan-400">{cmyk.c}%</span>,{' '}
-            <span className="text-pink-400">{cmyk.m}%</span>,{' '}
-            <span className="text-yellow-400">{cmyk.y}%</span>,{' '}
-            <span className="text-gray-400">{cmyk.k}%</span>
-          </p>
-          {copiedFormat === 'CMYK' && <span className="text-xs text-green-400">Copied!</span>}
-        </div>
-        <button
-          onClick={onClose}
-          className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-300"
-        >
-          Close
-        </button>
       </div>
     </div>
   );
