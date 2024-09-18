@@ -1,9 +1,9 @@
 'use client'
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import ColorPalette from '../components/ColorPalette';
 import ColorDetailsModal from '../components/ColorDetailsModal';
 import { generatePalette } from './utils/colorUtils';
-import { SunIcon, SwatchIcon, ArrowDownTrayIcon, ShareIcon, PhotoIcon, CodeBracketIcon } from '@heroicons/react/24/outline';
+import { SunIcon, SwatchIcon, PhotoIcon, CodeBracketIcon, ShareIcon } from '@heroicons/react/24/outline';
 import html2canvas from 'html2canvas';
 
 const Logo = () => (
@@ -29,6 +29,42 @@ export default function Home() {
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  const sharePalette = useCallback(() => {
+    const state = {
+      palette,
+      lockedColors,
+      brightness,
+      hueRange
+    };
+    const stateString = btoa(JSON.stringify(state)); // Encode the state to base64
+    const url = `${window.location.origin}?s=${stateString}`;
+    
+    navigator.clipboard.writeText(url).then(() => {
+      alert('Share link copied to clipboard!');
+    }).catch(err => {
+      console.error('Failed to copy share link: ', err);
+    });
+  }, [palette, lockedColors, brightness, hueRange]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const stateParam = params.get('s');
+    if (stateParam) {
+      try {
+        const state = JSON.parse(atob(stateParam));
+        setPalette(state.palette);
+        setLockedColors(state.lockedColors);
+        setBrightness(state.brightness);
+        setHueRange(state.hueRange);
+      } catch (error) {
+        console.error('Failed to parse shared state:', error);
+        generateNewPalette();
+      }
+    } else {
+      generateNewPalette();
+    }
+  }, []);
+
   const generateNewPalette = useCallback(() => {
     setPalette(prevPalette => {
       const newPalette = generatePalette(5, brightness, hueRange, prevPalette, lockedColors);
@@ -38,10 +74,6 @@ export default function Home() {
       return newPalette;
     });
   }, [brightness, hueRange, lockedColors]);
-
-  useEffect(() => {
-    generateNewPalette();
-  }, []);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -99,30 +131,6 @@ export default function Home() {
     link.click();
   };
 
-  const sharePalette = useCallback(() => {
-    const paletteString = palette.join('-');
-    const url = `${window.location.origin}?p=${paletteString}`;
-    
-    navigator.clipboard.writeText(url).then(() => {
-      alert('Share link copied to clipboard!');
-    }).catch(err => {
-      console.error('Failed to copy share link: ', err);
-    });
-  }, [palette]);
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const paletteParam = params.get('p');
-    if (paletteParam) {
-      const loadedPalette = paletteParam.split('-');
-      if (loadedPalette.length === palette.length) {
-        setPalette(loadedPalette);
-      }
-    } else {
-      generateNewPalette();
-    }
-  }, []);
-
   const handleHueChange = (index: 0 | 1, value: string) => {
     const newInputs = [...hueInputs] as [string, string];
     newInputs[index] = value;
@@ -179,16 +187,6 @@ export default function Home() {
       return prevPalette;
     });
   }, [selectedColor]);
-
-  const memoizedColorPalette = useMemo(() => (
-    <ColorPalette
-      palette={palette}
-      lockedColors={lockedColors}
-      onToggleLock={toggleLock}
-      onGenerateNewPalette={generateNewPalette}
-      onColorClick={handleColorClick}
-    />
-  ), [palette, lockedColors, toggleLock, generateNewPalette, handleColorClick]);
 
   return (
     <main className="h-screen flex flex-col">
@@ -253,7 +251,13 @@ export default function Home() {
           </div>
         </div>
       </header>
-      {memoizedColorPalette}
+      <ColorPalette
+        palette={palette}
+        lockedColors={lockedColors}
+        onToggleLock={toggleLock}
+        onGenerateNewPalette={generateNewPalette}
+        onColorClick={handleColorClick}
+      />
       {selectedColor && (
         <ColorDetailsModal 
           color={selectedColor}
