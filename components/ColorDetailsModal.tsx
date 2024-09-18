@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { hexToRgb, hexToHsl, hexToCmyk, getContrastColor } from '../app/utils/colorUtils';
+import { hexToRgb, hexToHsl, hexToCmyk } from '../app/utils/colorUtils';
 import { XMarkIcon, ClipboardDocumentIcon, PaintBrushIcon } from '@heroicons/react/24/outline';
 
 interface ColorDetailsModalProps {

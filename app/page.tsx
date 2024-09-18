@@ -24,12 +24,46 @@ export default function Home() {
   const [palette, setPalette] = useState<string[]>([]);
   const [lockedColors, setLockedColors] = useState<boolean[]>([]);
   const [hueRange, setHueRange] = useState<[number, number]>([0, 360]);
-  const [hueInputs, setHueInputs] = useState<[string, string]>(["0", "360"]);
   const exportRef = useRef<HTMLDivElement>(null);
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAdjustmentOpen, setIsAdjustmentOpen] = useState(false);
   const [adjustments, setAdjustments] = useState<AdjustmentValues>({ h: 0, s: 0, b: 0, t: 0 });
+
+  const generateNewPalette = useCallback(() => {
+    const newPalette = generatePalette(
+      5,
+      50,
+      [hueRange[0], hueRange[1]],
+      palette,
+      lockedColors
+    );
+  
+    // Apply adjustments only to unlocked colors
+    const adjustedPalette = newPalette.map((color, index) => {
+      if (lockedColors[index]) {
+        return palette[index]; // Keep the locked color as is
+      } else {
+        return adjustPaletteHSL([color], adjustments)[0]; // Apply adjustments only to unlocked colors
+      }
+    });
+
+    setPalette(adjustedPalette);
+
+    // Ensure lockedColors array matches the palette length
+    setLockedColors(prev => 
+      prev.length !== newPalette.length ? new Array(newPalette.length).fill(false) : prev
+    );
+  }, [hueRange, lockedColors, palette, adjustments]);
+
+  // Initial palette generation
+  useEffect(() => {
+    if (palette.length === 0) {
+      const initialPalette = generatePalette(5, 50, [hueRange[0], hueRange[1]]);
+      setPalette(initialPalette);
+      setLockedColors(new Array(initialPalette.length).fill(false));
+    }
+  }, []);
 
   const sharePalette = useCallback(() => {
     const state = {
@@ -60,36 +94,8 @@ export default function Home() {
         console.error('Failed to parse shared state:', error);
         generateNewPalette();
       }
-    } else {
-      generateNewPalette();
     }
-  }, []);
-
-  const generateNewPalette = useCallback(() => {
-    const newPalette = generatePalette(
-      5,
-      50,
-      [hueRange[0], hueRange[1]],
-      palette,
-      lockedColors
-    );
-  
-    // Apply adjustments only to unlocked colors
-    const adjustedPalette = newPalette.map((color, index) => {
-      if (lockedColors[index]) {
-        return palette[index]; // Keep the locked color as is
-      } else {
-        return adjustPaletteHSL([color], adjustments)[0]; // Apply adjustments only to unlocked colors
-      }
-    });
-
-    setPalette(adjustedPalette);
-
-    // Ensure lockedColors array matches the palette length
-    setLockedColors(prev => 
-      prev.length !== newPalette.length ? new Array(newPalette.length).fill(false) : prev
-    );
-  }, [hueRange, lockedColors, palette, adjustments]);
+  }, [generateNewPalette]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -101,10 +107,6 @@ export default function Home() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [generateNewPalette, isModalOpen]);
-
-  useEffect(() => {
-    setHueInputs([hueRange[0].toString(), hueRange[1].toString()]);
-  }, [hueRange]);
 
   const toggleLock = useCallback((index: number) => {
     setLockedColors(prev => {
@@ -144,48 +146,6 @@ export default function Home() {
     link.download = 'color-palette.json';
     link.href = URL.createObjectURL(blob);
     link.click();
-  };
-
-  const handleHueChange = (index: 0 | 1, value: string) => {
-    const newInputs = [...hueInputs] as [string, string];
-    newInputs[index] = value;
-    setHueInputs(newInputs);
-
-    const numValue = parseInt(value);
-    if (!isNaN(numValue) && numValue >= 0 && numValue <= 360) {
-      setHueRange(prevRange => {
-        const newRange = [...prevRange] as [number, number];
-        newRange[index] = numValue;
-        return newRange;
-      });
-    }
-  };
-
-  const handleHueBlur = (index: 0 | 1) => {
-    const numValue = parseInt(hueInputs[index]);
-    if (isNaN(numValue) || numValue < 0) {
-      setHueInputs(prev => {
-        const newInputs = [...prev] as [string, string];
-        newInputs[index] = "0";
-        return newInputs;
-      });
-      setHueRange(prevRange => {
-        const newRange = [...prevRange] as [number, number];
-        newRange[index] = 0;
-        return newRange;
-      });
-    } else if (numValue > 360) {
-      setHueInputs(prev => {
-        const newInputs = [...prev] as [string, string];
-        newInputs[index] = "360";
-        return newInputs;
-      });
-      setHueRange(prevRange => {
-        const newRange = [...prevRange] as [number, number];
-        newRange[index] = 360;
-        return newRange;
-      });
-    }
   };
 
   const handleColorClick = useCallback((color: string) => {
@@ -269,7 +229,6 @@ export default function Home() {
         palette={palette}
         lockedColors={lockedColors}
         onToggleLock={toggleLock}
-        onGenerateNewPalette={generateNewPalette}
         onColorClick={handleColorClick}
       />
       {selectedColor && (

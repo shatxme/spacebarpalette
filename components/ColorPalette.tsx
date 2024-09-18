@@ -5,17 +5,13 @@ interface ColorPaletteProps {
   palette: string[];
   lockedColors: boolean[];
   onToggleLock: (index: number) => void;
-  onGenerateNewPalette: () => void;
   onColorClick: (color: string) => void;
+  // Remove onGenerateNewPalette if it's not being used
+  // onGenerateNewPalette: () => void;
 }
 
-const ColorPalette: React.FC<ColorPaletteProps> = ({
-  palette,
-  lockedColors,
-  onToggleLock,
-  onGenerateNewPalette,
-  onColorClick,
-}) => {
+// Update the function signature accordingly
+export default function ColorPalette({ palette, lockedColors, onToggleLock, onColorClick }: ColorPaletteProps) {
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
 
   const copyToClipboard = (text: string, index: number) => {
@@ -85,6 +81,4 @@ const ColorPalette: React.FC<ColorPaletteProps> = ({
       })}
     </div>
   );
-};
-
-export default ColorPalette;
+}
