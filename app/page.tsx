@@ -3,8 +3,13 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ColorPalette from '../components/ColorPalette';
 import ColorDetailsModal from '../components/ColorDetailsModal';
 import ColorAdjustmentSliders from '../components/ColorAdjustmentSliders';
-import { generatePalette, adjustPaletteHSL, AdjustmentValues } from './utils/colorUtils';
-import { PhotoIcon, CodeBracketIcon, ShareIcon, AdjustmentsHorizontalIcon } from '@heroicons/react/24/outline';
+import { 
+  generatePalette, 
+  adjustPaletteHSL, 
+  AdjustmentValues, 
+  simulatePaletteColorBlindness 
+} from './utils/colorUtils';
+import { PhotoIcon, CodeBracketIcon, ShareIcon, AdjustmentsHorizontalIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
 import html2canvas from 'html2canvas';
 
 const Logo = () => (
@@ -29,6 +34,8 @@ export default function Home() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAdjustmentOpen, setIsAdjustmentOpen] = useState(false);
   const [adjustments, setAdjustments] = useState<AdjustmentValues>({ h: 0, s: 0, b: 0, t: 0 });
+  const [showColorBlindness, setShowColorBlindness] = useState(false);
+  const [colorBlindnessType, setColorBlindnessType] = useState<'protanopia' | 'deuteranopia' | 'tritanopia' | 'achromatopsia'>('protanopia');
 
   const generateNewPalette = useCallback(() => {
     const newPalette = generatePalette(
@@ -174,6 +181,17 @@ export default function Home() {
     // Do not apply adjustments to the current palette
   };
 
+  const getSimulatedPalette = useCallback(() => {
+    return showColorBlindness ? simulatePaletteColorBlindness(palette, colorBlindnessType) : palette;
+  }, [palette, showColorBlindness, colorBlindnessType]);
+
+  const colorBlindnessOptions = [
+    { value: 'protanopia', label: 'Protanopia' },
+    { value: 'deuteranopia', label: 'Deuteranopia' },
+    { value: 'tritanopia', label: 'Tritanopia' },
+    { value: 'achromatopsia', label: 'Achromatopsia' }
+  ];
+
   return (
     <main className="min-h-screen flex flex-col">
       <header className="bg-white shadow-sm p-4">
@@ -222,11 +240,43 @@ export default function Home() {
                 </div>
               )}
             </div>
+            <div className="relative">
+              <button 
+                onClick={() => setShowColorBlindness(!showColorBlindness)}
+                className="flex items-center space-x-1 p-2 hover:bg-gray-100 rounded-md transition-colors duration-200"
+                title="Color Blindness Simulation"
+              >
+                <span className="text-sm text-gray-600">Color Blindness</span>
+                <ChevronDownIcon className="h-4 w-4 text-gray-500" />
+              </button>
+              {showColorBlindness && (
+                <div className="absolute right-0 mt-2 w-56 bg-white shadow-lg rounded-lg overflow-hidden z-10 border border-gray-200">
+                  <div className="p-2 border-b border-gray-200">
+                    <h3 className="text-sm font-semibold text-gray-700">Simulate Color Blindness</h3>
+                  </div>
+                  <div className="max-h-60 overflow-y-auto">
+                    {colorBlindnessOptions.map((option) => (
+                      <button
+                        key={option.value}
+                        onClick={() => setColorBlindnessType(option.value as any)}
+                        className={`w-full text-left px-4 py-2 text-sm ${
+                          colorBlindnessType === option.value
+                            ? 'bg-blue-50 text-blue-600'
+                            : 'text-gray-700 hover:bg-gray-50'
+                        } transition-colors duration-200`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </header>
       <ColorPalette
-        palette={palette}
+        palette={getSimulatedPalette()}
         lockedColors={lockedColors}
         onToggleLock={toggleLock}
         onColorClick={handleColorClick}

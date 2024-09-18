@@ -1,9 +1,11 @@
 export interface AdjustmentValues {
   h: number;  // Hue adjustment
   s: number;  // Saturation adjustment
-  b: number;  // Brightness adjustment (changed from 'l' to 'b')
+  b: number;  // Brightness adjustment
   t: number;  // Temperature adjustment
 }
+
+const GOLDEN_RATIO = 0.618033988749895;
 
 export function hslToHex(h: number, s: number, l: number): string {
   h /= 360;
@@ -34,46 +36,143 @@ export function hslToHex(h: number, s: number, l: number): string {
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }
 
+function getRandomInt(min: number, max: number): number {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function getComplementaryHue(hue: number): number {
+  return (hue + 180) % 360;
+}
+
+function getAnalogousHues(hue: number): [number, number] {
+  return [(hue - 30 + 360) % 360, (hue + 30) % 360];
+}
+
+function getTriadicHues(hue: number): [number, number] {
+  return [(hue + 120) % 360, (hue + 240) % 360];
+}
+
+function getSplitComplementaryHues(hue: number): [number, number] {
+  const complement = getComplementaryHue(hue);
+  return [(complement - 30 + 360) % 360, (complement + 30) % 360];
+}
+
+function getLuminance(r: number, g: number, b: number): number {
+  const a = [r, g, b].map(v => {
+    v /= 255;
+    return v <= 0.03928
+      ? v / 12.92
+      : Math.pow((v + 0.055) / 1.055, 2.4);
+  });
+  return a[0] * 0.2126 + a[1] * 0.7152 + a[2] * 0.0722;
+}
+
+function getContrastRatio(color1: string, color2: string): number {
+  const rgb1 = hexToRgb(color1);
+  const rgb2 = hexToRgb(color2);
+  const l1 = getLuminance(rgb1.r, rgb1.g, rgb1.b);
+  const l2 = getLuminance(rgb2.r, rgb2.g, rgb2.b);
+  const lighter = Math.max(l1, l2);
+  const darker = Math.min(l1, l2);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+function ensureSufficientContrast(palette: string[]): string[] {
+  const whiteContrast = palette.map(color => getContrastRatio(color, '#FFFFFF'));
+  const blackContrast = palette.map(color => getContrastRatio(color, '#000000'));
+  
+  const hasGoodWhiteContrast = whiteContrast.some(ratio => ratio >= 4.5);
+  const hasGoodBlackContrast = blackContrast.some(ratio => ratio >= 4.5);
+
+  if (hasGoodWhiteContrast && hasGoodBlackContrast) {
+    return palette;
+  }
+
+  // If we don't have good contrast, adjust the lightness of one color
+  const indexToAdjust = whiteContrast.findIndex((ratio, index) => 
+    ratio < 4.5 && blackContrast[index] < 4.5
+  );
+
+  if (indexToAdjust !== -1) {
+    const { h, s, l } = hexToHsl(palette[indexToAdjust]);
+    const newL = l > 50 ? Math.min(l + 20, 100) : Math.max(l - 20, 0);
+    palette[indexToAdjust] = hslToHex(h, s, newL);
+  }
+
+  return palette;
+}
+
 export function generatePalette(
   count: number,
   brightness: number,
-  hueRange: number[],
+  hueRange: [number, number],
   currentPalette: string[] = [],
   lockedColors: boolean[] = []
 ): string[] {
-  const palette: string[] = [];
+  let palette: string[] = [];
   const [minHue, maxHue] = hueRange;
 
-  const generateColor = (hue: number) => {
-    const constrainedHue = minHue + (hue - minHue) % (maxHue - minHue);
-    let saturation = Math.max(50, Math.min(100, 100 - brightness / 2));
-    let lightness = Math.max(30, Math.min(70, brightness)); // Ensure lightness is never too low or high
+  const generateColor = (hue: number, isAccent: boolean = false, isNeutral: boolean = false) => {
+    let saturation: number;
+    let lightness: number;
 
-    // Add some randomness
-    saturation += (Math.random() * 20 - 10);
-    lightness += (Math.random() * 20 - 10);
+    if (isNeutral) {
+      saturation = getRandomInt(0, 10);
+      lightness = getRandomInt(10, 90);
+    } else if (isAccent) {
+      saturation = getRandomInt(80, 100);
+      lightness = getRandomInt(40, 60);
+    } else {
+      saturation = getRandomInt(40, 80);
+      const minBrightness = Math.max(30, brightness - 20);
+      const maxBrightness = Math.min(70, brightness + 20);
+      lightness = getRandomInt(minBrightness, maxBrightness);
+    }
 
-    // Ensure values are within valid ranges
-    saturation = Math.max(0, Math.min(100, saturation));
-    lightness = Math.max(20, Math.min(80, lightness)); // Further restrict lightness range
-
-    return { h: constrainedHue % 360, s: saturation, l: lightness };
+    return { h: hue, s: saturation, l: lightness };
   };
 
-  const goldenRatio = 0.618033988749895;
-  let hue = Math.random();
+  // Use golden ratio to determine the base hue
+  let baseHue = getRandomInt(minHue, maxHue);
+  baseHue = (baseHue + GOLDEN_RATIO * 360) % 360;
+
+  const harmonyType = getRandomInt(0, 3); // Randomly select a harmony type
+
+  let harmonicHues: number[];
+  switch (harmonyType) {
+    case 0: // Complementary
+      harmonicHues = [baseHue, getComplementaryHue(baseHue)];
+      break;
+    case 1: // Analogous
+      harmonicHues = [baseHue, ...getAnalogousHues(baseHue)];
+      break;
+    case 2: // Triadic
+      harmonicHues = [baseHue, ...getTriadicHues(baseHue)];
+      break;
+    case 3: // Split-complementary
+      harmonicHues = [baseHue, ...getSplitComplementaryHues(baseHue)];
+      break;
+    default:
+      harmonicHues = [baseHue];
+  }
+
+  const accentIndex = getRandomInt(0, count - 1);
+  const neutralIndex = (accentIndex + getRandomInt(1, count - 1)) % count;
+
   for (let i = 0; i < count; i++) {
     if (lockedColors[i] && currentPalette[i]) {
-      // Keep the locked color
       palette.push(currentPalette[i]);
     } else {
-      // Generate a new color
-      hue = (hue + goldenRatio) % 1;
-      const newHue = minHue + hue * (maxHue - minHue);
-      const { h, s, l } = generateColor(newHue);
+      const hue = (harmonicHues[i % harmonicHues.length] + i * GOLDEN_RATIO * 360) % 360;
+      const isAccent = i === accentIndex;
+      const isNeutral = i === neutralIndex;
+      const { h, s, l } = generateColor(hue, isAccent, isNeutral);
       palette.push(hslToHex(h, s, l));
     }
   }
+
+  // Ensure sufficient contrast
+  palette = ensureSufficientContrast(palette);
 
   return palette;
 }
@@ -220,4 +319,50 @@ export function adjustPaletteHSL(palette: string[], adjustments: AdjustmentValue
 
     return hslToHex(h, s, l);
   });
+}
+
+// Add these new types and functions at the end of the file
+
+type ColorBlindnessType = 'protanopia' | 'deuteranopia' | 'tritanopia' | 'achromatopsia';
+
+function simulateColorBlindness(hex: string, type: ColorBlindnessType): string {
+  const rgb = hexToRgb(hex);
+  let r = rgb.r / 255;
+  let g = rgb.g / 255;
+  let b = rgb.b / 255;
+
+  // Simulation matrices from http://www.colorjack.com/labs/colormatrix/
+  const matrices: Record<ColorBlindnessType, number[][]> = {
+    protanopia: [
+      [0.567, 0.433, 0],
+      [0.558, 0.442, 0],
+      [0, 0.242, 0.758]
+    ],
+    deuteranopia: [
+      [0.625, 0.375, 0],
+      [0.7, 0.3, 0],
+      [0, 0.3, 0.7]
+    ],
+    tritanopia: [
+      [0.95, 0.05, 0],
+      [0, 0.433, 0.567],
+      [0, 0.475, 0.525]
+    ],
+    achromatopsia: [
+      [0.299, 0.587, 0.114],
+      [0.299, 0.587, 0.114],
+      [0.299, 0.587, 0.114]
+    ]
+  };
+
+  const matrix = matrices[type];
+  const [newR, newG, newB] = matrix.map(row => 
+    Math.min(1, Math.max(0, row[0] * r + row[1] * g + row[2] * b))
+  );
+
+  return hslToHex(0, 0, newR * 100); // Convert back to hex
+}
+
+export function simulatePaletteColorBlindness(palette: string[], type: ColorBlindnessType): string[] {
+  return palette.map(color => simulateColorBlindness(color, type));
 }
