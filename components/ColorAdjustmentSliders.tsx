@@ -1,46 +1,25 @@
-import React, { useState, useEffect } from 'react';
-import { adjustPaletteHSL, AdjustmentValues } from '../app/utils/colorUtils';
+import React from 'react';
+import { AdjustmentValues } from '../app/utils/colorUtils';
 
 interface ColorAdjustmentSlidersProps {
-  palette: string[];
-  onPaletteChange: (newPalette: string[]) => void;
   onAdjustmentsChange: (adjustments: AdjustmentValues) => void;
-  initialAdjustments: AdjustmentValues;
+  adjustments: AdjustmentValues;
 }
 
 export default function ColorAdjustmentSliders({ 
-  palette, 
-  onPaletteChange, 
   onAdjustmentsChange,
-  initialAdjustments 
+  adjustments 
 }: ColorAdjustmentSlidersProps) {
-  const [adjustments, setAdjustments] = useState<AdjustmentValues>(initialAdjustments);
-
-  useEffect(() => {
-    setAdjustments(initialAdjustments);
-  }, [initialAdjustments]);
-
   const handleSliderChange = (property: keyof AdjustmentValues, value: number) => {
-    let adjustedValue = value;
-    if (property === 'h') {
-      adjustedValue = ((value % 360) + 360) % 360; // Ensure hue is 0-359
-    } else if (property === 's' || property === 'l' || property === 't') {
-      adjustedValue = Math.max(-100, Math.min(100, value)); // Clamp values to -100 to 100
-    }
-    
-    const newAdjustments = { ...adjustments, [property]: adjustedValue };
-    setAdjustments(newAdjustments);
-    onAdjustmentsChange(newAdjustments);
-    const newPalette = adjustPaletteHSL(palette, newAdjustments);
-    onPaletteChange(newPalette);
+    onAdjustmentsChange({ ...adjustments, [property]: value });
   };
 
   const sliders = [
-    { name: 'Hue', property: 'h', min: 0, max: 359, default: 0,
+    { name: 'Hue', property: 'h', min: -180, max: 180, default: 0,
       style: 'bg-gradient-to-r from-red-500 via-green-500 to-blue-500' },
     { name: 'Saturation', property: 's', min: -100, max: 100, default: 0,
       style: 'bg-gradient-to-r from-gray-300 to-red-500' },
-    { name: 'Lightness', property: 'l', min: -100, max: 100, default: 0,
+    { name: 'Brightness', property: 'b', min: -100, max: 100, default: 0,
       style: 'bg-gradient-to-r from-black via-gray-500 to-white' },
     { name: 'Temperature', property: 't', min: -100, max: 100, default: 0,
       style: 'bg-gradient-to-r from-blue-500 via-white to-yellow-500' },

@@ -1,7 +1,7 @@
 export interface AdjustmentValues {
   h: number;  // Hue adjustment
   s: number;  // Saturation adjustment
-  l: number;  // Lightness adjustment
+  b: number;  // Brightness adjustment (changed from 'l' to 'b')
   t: number;  // Temperature adjustment
 }
 
@@ -190,17 +190,33 @@ export function adjustPaletteHSL(palette: string[], adjustments: AdjustmentValue
     let { h, s, l } = hexToHsl(color);
 
     // Apply hue adjustment
-    h = (h + adjustments.h + 360) % 360;
+    h = (h + adjustments.h * 2 + 360) % 360;
 
     // Apply saturation adjustment
     s = Math.max(0, Math.min(100, s + adjustments.s));
 
-    // Apply lightness adjustment
-    l = Math.max(0, Math.min(100, l + adjustments.l));
+    // Apply brightness adjustment
+    const brightnessAdjustment = adjustments.b / 100; // Convert to a scale of -1 to 1
+    if (brightnessAdjustment > 0) {
+      l = l + (100 - l) * brightnessAdjustment;
+    } else {
+      l = l + l * brightnessAdjustment;
+    }
+    l = Math.max(0, Math.min(100, l));
 
     // Apply temperature adjustment
-    const tempShift = adjustments.t * 0.6; // Scale -100 to 100 to -60 to 60 degree shift
-    h = (h + tempShift + 360) % 360;
+    const tempAdjustment = adjustments.t / 100; // Convert to a scale of -1 to 1
+    if (tempAdjustment < 0) {
+      // Cool: shift towards blue
+      h = (h + 60 * tempAdjustment + 360) % 360;
+      s = Math.max(0, Math.min(100, s * (1 + 0.5 * tempAdjustment)));
+      l = Math.max(0, Math.min(100, l * (1 + 0.2 * tempAdjustment)));
+    } else {
+      // Warm: shift towards yellow/orange
+      h = (h - 30 * tempAdjustment + 360) % 360;
+      s = Math.max(0, Math.min(100, s * (1 + 0.3 * tempAdjustment)));
+      l = Math.max(0, Math.min(100, l * (1 + 0.1 * tempAdjustment)));
+    }
 
     return hslToHex(h, s, l);
   });

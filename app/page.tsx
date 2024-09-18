@@ -3,16 +3,9 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ColorPalette from '../components/ColorPalette';
 import ColorDetailsModal from '../components/ColorDetailsModal';
 import ColorAdjustmentSliders from '../components/ColorAdjustmentSliders';
-import { generatePalette, adjustPaletteHSL } from './utils/colorUtils';
-import { SunIcon, SwatchIcon, PhotoIcon, CodeBracketIcon, ShareIcon, AdjustmentsHorizontalIcon } from '@heroicons/react/24/outline';
+import { generatePalette, adjustPaletteHSL, AdjustmentValues } from './utils/colorUtils';
+import { PhotoIcon, CodeBracketIcon, ShareIcon, AdjustmentsHorizontalIcon } from '@heroicons/react/24/outline';
 import html2canvas from 'html2canvas';
-
-interface AdjustmentValues {
-  h: number;
-  s: number;
-  l: number;
-  t: number;
-}
 
 const Logo = () => (
   <div className="flex items-center space-x-3">
@@ -29,7 +22,6 @@ const Logo = () => (
 
 export default function Home() {
   const [palette, setPalette] = useState<string[]>([]);
-  const [adjustedPalette, setAdjustedPalette] = useState<string[]>([]);
   const [lockedColors, setLockedColors] = useState<boolean[]>([]);
   const [hueRange, setHueRange] = useState<[number, number]>([0, 360]);
   const [hueInputs, setHueInputs] = useState<[string, string]>(["0", "360"]);
@@ -37,7 +29,7 @@ export default function Home() {
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAdjustmentOpen, setIsAdjustmentOpen] = useState(false);
-  const [cumulativeAdjustments, setCumulativeAdjustments] = useState<AdjustmentValues>({ h: 0, s: 0, l: 0, t: 0 });
+  const [adjustments, setAdjustments] = useState<AdjustmentValues>({ h: 0, s: 0, b: 0, t: 0 });
 
   const sharePalette = useCallback(() => {
     const state = {
@@ -73,29 +65,31 @@ export default function Home() {
     }
   }, []);
 
-  useEffect(() => {
-    const initialPalette = generatePalette(5, 50, [0, 360]);
-    console.log('Initial palette:', initialPalette); // Add this log
-    setPalette(initialPalette);
-  }, []);
-
   const generateNewPalette = useCallback(() => {
-    setPalette(prevPalette => {
-      const newPalette = generatePalette(
-        5,
-        50,
-        [hueRange[0], hueRange[1]],
-        prevPalette,
-        lockedColors
-      );
-      if (lockedColors.length !== newPalette.length) {
-        setLockedColors(new Array(newPalette.length).fill(false));
+    const newPalette = generatePalette(
+      5,
+      50,
+      [hueRange[0], hueRange[1]],
+      palette,
+      lockedColors
+    );
+  
+    // Apply adjustments only to unlocked colors
+    const adjustedPalette = newPalette.map((color, index) => {
+      if (lockedColors[index]) {
+        return palette[index]; // Keep the locked color as is
+      } else {
+        return adjustPaletteHSL([color], adjustments)[0]; // Apply adjustments only to unlocked colors
       }
-      return newPalette;
     });
-    setCumulativeAdjustments({ h: 0, s: 0, l: 0, t: 0 }); // Reset cumulative adjustments
-    setAdjustedPalette([]); // Clear adjusted palette
-  }, [hueRange, lockedColors]);
+
+    setPalette(adjustedPalette);
+
+    // Ensure lockedColors array matches the palette length
+    setLockedColors(prev => 
+      prev.length !== newPalette.length ? new Array(newPalette.length).fill(false) : prev
+    );
+  }, [hueRange, lockedColors, palette, adjustments]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -215,14 +209,9 @@ export default function Home() {
     setSelectedColor(newColor);
   };
 
-  const handlePaletteChange = (newPalette: string[]) => {
-    setAdjustedPalette(newPalette);
-  };
-
   const handleAdjustmentsChange = (newAdjustments: AdjustmentValues) => {
-    setCumulativeAdjustments(newAdjustments);
-    const newAdjustedPalette = adjustPaletteHSL(palette, newAdjustments);
-    setAdjustedPalette(newAdjustedPalette);
+    setAdjustments(newAdjustments);
+    // Do not apply adjustments to the current palette
   };
 
   return (
@@ -267,10 +256,8 @@ export default function Home() {
               {isAdjustmentOpen && (
                 <div className="absolute right-0 mt-2 w-64 bg-white shadow-lg rounded-lg overflow-hidden z-10">
                   <ColorAdjustmentSliders
-                    palette={palette}
-                    onPaletteChange={handlePaletteChange}
                     onAdjustmentsChange={handleAdjustmentsChange}
-                    initialAdjustments={cumulativeAdjustments}
+                    adjustments={adjustments}
                   />
                 </div>
               )}
@@ -279,7 +266,7 @@ export default function Home() {
         </div>
       </header>
       <ColorPalette
-        palette={adjustedPalette.length > 0 ? adjustedPalette : palette}
+        palette={palette}
         lockedColors={lockedColors}
         onToggleLock={toggleLock}
         onGenerateNewPalette={generateNewPalette}
