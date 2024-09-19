@@ -55,8 +55,6 @@ export default function ColorPalette({ palette, lockedColors, onToggleLock, onCo
             <div className="mt-auto p-2 sm:p-4">
               <div 
                 className={`flex items-center justify-between p-2 rounded cursor-pointer transition-all duration-200 ${
-                  isBright ? 'bg-gray-200 bg-opacity-50' : ''
-                } ${
                   copiedIndex === index 
                     ? 'bg-white bg-opacity-20' 
                     : 'hover:bg-white hover:bg-opacity-10'

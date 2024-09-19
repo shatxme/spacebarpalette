@@ -339,14 +339,9 @@ function simulateColorBlindness(hex: string, type: ColorBlindnessType): string {
       s = 0.0 * l + 0.0 * m + 1.0 * s;
       break;
     case 'tritanopia':
-      // Enhanced tritanopia simulation
       l = 1.0 * l + 0.0 * m + 0.0 * s;
       m = 0.0 * l + 1.0 * m + 0.0 * s;
       s = -0.395913 * l + 0.801109 * m + 0.0 * s;
-      // Enhance blue-to-pink shift and yellow-to-red conversion
-      l = 0.992052 * l + 0.003974 * m + 0.003974 * s;
-      m = 0.007948 * l + 0.992052 * m + 0.007948 * s;
-      s = 0.007948 * l + 0.007948 * m + 0.992052 * s;
       break;
     case 'achromatopsia':
       // Convert to grayscale
@@ -355,47 +350,9 @@ function simulateColorBlindness(hex: string, type: ColorBlindnessType): string {
   }
 
   // Convert back to RGB
-  r = (0.0809444479 * l) + (-0.130504409 * m) + (0.116721066 * s);
-  g = (-0.0102485335 * l) + (0.0540193266 * m) + (-0.113614708 * s);
-  b = (-0.000365296938 * l) + (-0.00412161469 * m) + (0.693511405 * s);
-
-  // Enhance tritanopia simulation
-  if (type === 'tritanopia') {
-    // Intensify blue-to-pink shift
-    r = Math.pow(r, 0.9) * 1.1;
-    g = Math.pow(g, 1.1) * 0.9;
-    b = Math.pow(b, 0.7);
-
-    // Enhance yellow-to-red conversion and shift greens towards brown/red
-    if (r > g && g > b) {
-      r = Math.pow(r, 0.8) * 1.2;
-      g = Math.pow(g, 1.2) * 0.8;
-    } else if (g > r && g > b) {
-      // Shift greens towards brown/red
-      r = Math.pow(r, 0.9) * 1.1;
-      g = Math.pow(g, 1.1) * 0.9;
-      b = Math.pow(b, 1.2) * 0.8;
-    }
-
-    // Apply subtle reddish tint to neutral colors
-    const neutrality = Math.abs(r - g) + Math.abs(g - b) + Math.abs(b - r);
-    if (neutrality < 0.1) {
-      r += 0.05;
-      g -= 0.025;
-      b -= 0.025;
-    }
-  }
-
-  // Ensure values are in the correct range and preserve contrast
-  const max = Math.max(r, g, b);
-  if (max > 1) {
-    r /= max;
-    g /= max;
-    b /= max;
-  }
-  r = Math.max(0, Math.min(1, r));
-  g = Math.max(0, Math.min(1, g));
-  b = Math.max(0, Math.min(1, b));
+  r = Math.max(0, Math.min(1, (0.0809444479 * l) + (-0.130504409 * m) + (0.116721066 * s)));
+  g = Math.max(0, Math.min(1, (-0.0102485335 * l) + (0.0540193266 * m) + (-0.113614708 * s)));
+  b = Math.max(0, Math.min(1, (-0.000365296938 * l) + (-0.00412161469 * m) + (0.693511405 * s)));
 
   // Convert back to hex
   const toHex = (n: number) => Math.round(n * 255).toString(16).padStart(2, '0');
