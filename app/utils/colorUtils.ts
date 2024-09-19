@@ -304,18 +304,8 @@ export function adjustPaletteHSL(palette: string[], adjustments: AdjustmentValue
     l = Math.max(0, Math.min(100, l));
 
     // Apply temperature adjustment
-    const tempAdjustment = adjustments.t / 100; // Convert to a scale of -1 to 1
-    if (tempAdjustment < 0) {
-      // Cool: shift towards blue
-      h = (h + 60 * tempAdjustment + 360) % 360;
-      s = Math.max(0, Math.min(100, s * (1 + 0.5 * tempAdjustment)));
-      l = Math.max(0, Math.min(100, l * (1 + 0.2 * tempAdjustment)));
-    } else {
-      // Warm: shift towards yellow/orange
-      h = (h - 30 * tempAdjustment + 360) % 360;
-      s = Math.max(0, Math.min(100, s * (1 + 0.3 * tempAdjustment)));
-      l = Math.max(0, Math.min(100, l * (1 + 0.1 * tempAdjustment)));
-    }
+    const tempShift = adjustments.t * 0.6; // Scale -100 to 100 to -60 to 60 degree shift
+    h = (h + tempShift + 360) % 360;
 
     return hslToHex(h, s, l);
   });
@@ -323,7 +313,7 @@ export function adjustPaletteHSL(palette: string[], adjustments: AdjustmentValue
 
 // Add these new types and functions at the end of the file
 
-type ColorBlindnessType = 'protanopia' | 'deuteranopia' | 'tritanopia' | 'achromatopsia';
+export type ColorBlindnessType = 'protanopia' | 'deuteranopia' | 'tritanopia' | 'achromatopsia';
 
 function simulateColorBlindness(hex: string, type: ColorBlindnessType): string {
   const rgb = hexToRgb(hex);
@@ -331,36 +321,85 @@ function simulateColorBlindness(hex: string, type: ColorBlindnessType): string {
   let g = rgb.g / 255;
   let b = rgb.b / 255;
 
-  // Simulation matrices from http://www.colorjack.com/labs/colormatrix/
-  const matrices: Record<ColorBlindnessType, number[][]> = {
-    protanopia: [
-      [0.567, 0.433, 0],
-      [0.558, 0.442, 0],
-      [0, 0.242, 0.758]
-    ],
-    deuteranopia: [
-      [0.625, 0.375, 0],
-      [0.7, 0.3, 0],
-      [0, 0.3, 0.7]
-    ],
-    tritanopia: [
-      [0.95, 0.05, 0],
-      [0, 0.433, 0.567],
-      [0, 0.475, 0.525]
-    ],
-    achromatopsia: [
-      [0.299, 0.587, 0.114],
-      [0.299, 0.587, 0.114],
-      [0.299, 0.587, 0.114]
-    ]
-  };
+  // Convert to LMS color space
+  let l = (17.8824 * r) + (43.5161 * g) + (4.11935 * b);
+  let m = (3.45565 * r) + (27.1554 * g) + (3.86714 * b);
+  let s = (0.0299566 * r) + (0.184309 * g) + (1.46709 * b);
 
-  const matrix = matrices[type];
-  const [newR, newG, newB] = matrix.map(row => 
-    Math.min(1, Math.max(0, row[0] * r + row[1] * g + row[2] * b))
-  );
+  // Simulate color blindness
+  switch (type) {
+    case 'protanopia':
+      l = 0.0 * l + 2.02344 * m + -2.52581 * s;
+      m = 0.0 * l + 1.0 * m + 0.0 * s;
+      s = 0.0 * l + 0.0 * m + 1.0 * s;
+      break;
+    case 'deuteranopia':
+      l = 1.0 * l + 0.0 * m + 0.0 * s;
+      m = 0.494207 * l + 0.0 * m + 1.24827 * s;
+      s = 0.0 * l + 0.0 * m + 1.0 * s;
+      break;
+    case 'tritanopia':
+      // Enhanced tritanopia simulation
+      l = 1.0 * l + 0.0 * m + 0.0 * s;
+      m = 0.0 * l + 1.0 * m + 0.0 * s;
+      s = -0.395913 * l + 0.801109 * m + 0.0 * s;
+      // Enhance blue-to-pink shift and yellow-to-red conversion
+      l = 0.992052 * l + 0.003974 * m + 0.003974 * s;
+      m = 0.007948 * l + 0.992052 * m + 0.007948 * s;
+      s = 0.007948 * l + 0.007948 * m + 0.992052 * s;
+      break;
+    case 'achromatopsia':
+      // Convert to grayscale
+      const gray = 0.299 * r + 0.587 * g + 0.114 * b;
+      return `#${Math.round(gray * 255).toString(16).padStart(2, '0').repeat(3)}`;
+  }
 
-  return hslToHex(0, 0, newR * 100); // Convert back to hex
+  // Convert back to RGB
+  r = (0.0809444479 * l) + (-0.130504409 * m) + (0.116721066 * s);
+  g = (-0.0102485335 * l) + (0.0540193266 * m) + (-0.113614708 * s);
+  b = (-0.000365296938 * l) + (-0.00412161469 * m) + (0.693511405 * s);
+
+  // Enhance tritanopia simulation
+  if (type === 'tritanopia') {
+    // Intensify blue-to-pink shift
+    r = Math.pow(r, 0.9) * 1.1;
+    g = Math.pow(g, 1.1) * 0.9;
+    b = Math.pow(b, 0.7);
+
+    // Enhance yellow-to-red conversion and shift greens towards brown/red
+    if (r > g && g > b) {
+      r = Math.pow(r, 0.8) * 1.2;
+      g = Math.pow(g, 1.2) * 0.8;
+    } else if (g > r && g > b) {
+      // Shift greens towards brown/red
+      r = Math.pow(r, 0.9) * 1.1;
+      g = Math.pow(g, 1.1) * 0.9;
+      b = Math.pow(b, 1.2) * 0.8;
+    }
+
+    // Apply subtle reddish tint to neutral colors
+    const neutrality = Math.abs(r - g) + Math.abs(g - b) + Math.abs(b - r);
+    if (neutrality < 0.1) {
+      r += 0.05;
+      g -= 0.025;
+      b -= 0.025;
+    }
+  }
+
+  // Ensure values are in the correct range and preserve contrast
+  const max = Math.max(r, g, b);
+  if (max > 1) {
+    r /= max;
+    g /= max;
+    b /= max;
+  }
+  r = Math.max(0, Math.min(1, r));
+  g = Math.max(0, Math.min(1, g));
+  b = Math.max(0, Math.min(1, b));
+
+  // Convert back to hex
+  const toHex = (n: number) => Math.round(n * 255).toString(16).padStart(2, '0');
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }
 
 export function simulatePaletteColorBlindness(palette: string[], type: ColorBlindnessType): string[] {

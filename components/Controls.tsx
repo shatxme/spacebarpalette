@@ -7,8 +7,8 @@ interface ControlsProps {
   setColorCount: (count: number) => void;
   brightness: number;
   setBrightness: (brightness: number) => void;
-  hueRange: number[];
-  setHueRange: (range: number[]) => void;
+  hueRange: [number, number]; // Change this line
+  setHueRange: (range: [number, number]) => void; // Change this line
   onGenerateNewPalette: (palette: string[]) => void;
   currentPalette: string[];
   lockedColors: boolean[];
@@ -39,7 +39,7 @@ const Controls: React.FC<ControlsProps> = ({
     const newPalette = generatePalette(
       colorCount,
       brightness,
-      hueRange,
+      hueRange, // This is now correctly typed as [number, number]
       currentPalette,
       lockedColors
     );

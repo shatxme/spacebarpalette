@@ -7,7 +7,8 @@ import {
   generatePalette, 
   adjustPaletteHSL, 
   AdjustmentValues, 
-  simulatePaletteColorBlindness 
+  simulatePaletteColorBlindness,
+  ColorBlindnessType
 } from './utils/colorUtils';
 import { PhotoIcon, CodeBracketIcon, ShareIcon, AdjustmentsHorizontalIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
 import html2canvas from 'html2canvas';
@@ -35,25 +36,19 @@ export default function Home() {
   const [isAdjustmentOpen, setIsAdjustmentOpen] = useState(false);
   const [adjustments, setAdjustments] = useState<AdjustmentValues>({ h: 0, s: 0, b: 0, t: 0 });
   const [showColorBlindness, setShowColorBlindness] = useState(false);
-  const [colorBlindnessType, setColorBlindnessType] = useState<'protanopia' | 'deuteranopia' | 'tritanopia' | 'achromatopsia'>('protanopia');
+  const [colorBlindnessType, setColorBlindnessType] = useState<ColorBlindnessType>('protanopia');
 
   const generateNewPalette = useCallback(() => {
     const newPalette = generatePalette(
       5,
       50,
       [hueRange[0], hueRange[1]],
-      palette,
+      [],  // Pass an empty array instead of the current palette
       lockedColors
     );
-  
-    // Apply adjustments only to unlocked colors
-    const adjustedPalette = newPalette.map((color, index) => {
-      if (lockedColors[index]) {
-        return palette[index]; // Keep the locked color as is
-      } else {
-        return adjustPaletteHSL([color], adjustments)[0]; // Apply adjustments only to unlocked colors
-      }
-    });
+
+    // Apply adjustments to all colors, but only if adjustments is defined
+    const adjustedPalette = adjustments ? adjustPaletteHSL(newPalette, adjustments) : newPalette;
 
     setPalette(adjustedPalette);
 
@@ -61,32 +56,7 @@ export default function Home() {
     setLockedColors(prev => 
       prev.length !== newPalette.length ? new Array(newPalette.length).fill(false) : prev
     );
-  }, [hueRange, lockedColors, palette, adjustments]);
-
-  // Initial palette generation
-  useEffect(() => {
-    if (palette.length === 0) {
-      const initialPalette = generatePalette(5, 50, [hueRange[0], hueRange[1]]);
-      setPalette(initialPalette);
-      setLockedColors(new Array(initialPalette.length).fill(false));
-    }
-  }, []);
-
-  const sharePalette = useCallback(() => {
-    const state = {
-      palette,
-      lockedColors,
-      hueRange
-    };
-    const stateString = btoa(JSON.stringify(state)); // Encode the state to base64
-    const url = `${window.location.origin}?s=${stateString}`;
-    
-    navigator.clipboard.writeText(url).then(() => {
-      alert('Share link copied to clipboard!');
-    }).catch(err => {
-      console.error('Failed to copy share link: ', err);
-    });
-  }, [palette, lockedColors, hueRange]);
+  }, [hueRange, lockedColors, adjustments]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -97,12 +67,35 @@ export default function Home() {
         setPalette(state.palette);
         setLockedColors(state.lockedColors);
         setHueRange(state.hueRange);
+        if (state.adjustments) {
+          setAdjustments(state.adjustments);
+        }
+        // Do not clear the URL parameter
       } catch (error) {
         console.error('Failed to parse shared state:', error);
         generateNewPalette();
       }
+    } else if (palette.length === 0) {
+      generateNewPalette();
     }
-  }, [generateNewPalette]);
+  }, []);  // Keep the empty dependency array
+
+  const sharePalette = useCallback(() => {
+    const state = {
+      palette,
+      lockedColors,
+      hueRange,
+      adjustments  // Include adjustments in the shared state
+    };
+    const stateString = btoa(JSON.stringify(state));
+    const url = `${window.location.origin}?s=${stateString}`;
+    
+    navigator.clipboard.writeText(url).then(() => {
+      alert('Share link copied to clipboard!');
+    }).catch(err => {
+      console.error('Failed to copy share link: ', err);
+    });
+  }, [palette, lockedColors, hueRange, adjustments]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -258,7 +251,7 @@ export default function Home() {
                     {colorBlindnessOptions.map((option) => (
                       <button
                         key={option.value}
-                        onClick={() => setColorBlindnessType(option.value as any)}
+                        onClick={() => setColorBlindnessType(option.value as ColorBlindnessType)}
                         className={`w-full text-left px-4 py-2 text-sm ${
                           colorBlindnessType === option.value
                             ? 'bg-blue-50 text-blue-600'
