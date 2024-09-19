@@ -10,7 +10,7 @@ import {
   simulatePaletteColorBlindness,
   ColorBlindnessType
 } from './utils/colorUtils';
-import { PhotoIcon, CodeBracketIcon, ShareIcon, AdjustmentsHorizontalIcon, ChevronDownIcon, SparklesIcon } from '@heroicons/react/24/outline';
+import { PhotoIcon, CodeBracketIcon, ShareIcon, AdjustmentsHorizontalIcon, ChevronDownIcon, SparklesIcon, Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
 import html2canvas from 'html2canvas';
 
 const Logo = () => (
@@ -37,6 +37,7 @@ export default function Home() {
   const [adjustments, setAdjustments] = useState<AdjustmentValues>({ h: 0, s: 0, b: 0, t: 0 });
   const [showColorBlindness, setShowColorBlindness] = useState(false);
   const [colorBlindnessType, setColorBlindnessType] = useState<ColorBlindnessType>('protanopia');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const generateNewPalette = useCallback(() => {
     const newPalette = generatePalette(
@@ -191,114 +192,132 @@ export default function Home() {
     { value: 'achromatopsia', label: 'Achromatopsia' }
   ];
 
-  const generateNewPaletteButton = (
-    <button
-      onClick={generateNewPalette}
-      className="fixed bottom-4 right-4 bg-blue-600 text-white p-4 rounded-full shadow-lg hover:bg-blue-700 transition-colors duration-200 sm:hidden"
-      aria-label="Generate New Palette"
-    >
-      <SparklesIcon className="h-6 w-6" />
-    </button>
-  );
+  const closeDropdowns = useCallback(() => {
+    setIsAdjustmentOpen(false);
+    setShowColorBlindness(false);
+  }, []);
+
+  const mobileMenuItems = [
+    { icon: PhotoIcon, label: 'Export PNG', action: exportToPNG },
+    { icon: CodeBracketIcon, label: 'Export JSON', action: exportToJSON },
+    { icon: ShareIcon, label: 'Share', action: sharePalette },
+    { icon: AdjustmentsHorizontalIcon, label: 'Adjust', action: () => setIsAdjustmentOpen(!isAdjustmentOpen) },
+    { icon: ChevronDownIcon, label: 'Color Blindness', action: () => setShowColorBlindness(!showColorBlindness) },
+  ];
 
   return (
     <main className="min-h-screen flex flex-col">
       <header className="bg-white shadow-sm p-4">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <Logo />
-          <div className="flex items-center space-x-4">
-            <button 
-              onClick={exportToPNG} 
-              className="flex items-center space-x-1 p-1 hover:bg-gray-100 rounded" 
-              title="Export as PNG"
-            >
-              <PhotoIcon className="h-5 w-5 text-gray-600" />
-              <span className="text-sm text-gray-600 hidden sm:inline">PNG</span>
-            </button>
-            <button 
-              onClick={exportToJSON} 
-              className="flex items-center space-x-1 p-1 hover:bg-gray-100 rounded" 
-              title="Export as JSON"
-            >
-              <CodeBracketIcon className="h-5 w-5 text-gray-600" />
-              <span className="text-sm text-gray-600 hidden sm:inline">JSON</span>
-            </button>
-            <button 
-              onClick={sharePalette} 
-              className="flex items-center space-x-1 p-1 hover:bg-gray-100 rounded" 
-              title="Share Palette"
-            >
-              <ShareIcon className="h-5 w-5 text-gray-600" />
-              <span className="text-sm text-gray-600 hidden sm:inline">Share</span>
-            </button>
-            <div className="relative">
+          <div className="hidden sm:flex items-center space-x-4">
+            {/* Desktop menu items */}
+            {mobileMenuItems.map((item, index) => (
               <button 
-                onClick={() => setIsAdjustmentOpen(!isAdjustmentOpen)}
+                key={index}
+                onClick={() => {
+                  closeDropdowns();
+                  item.action();
+                }}
                 className="flex items-center space-x-1 p-1 hover:bg-gray-100 rounded" 
-                title="Adjust Colors"
+                title={item.label}
               >
-                <AdjustmentsHorizontalIcon className="h-5 w-5 text-gray-600" />
-                <span className="text-sm text-gray-600">Adjust</span>
+                <item.icon className="h-5 w-5 text-gray-600" />
+                <span className="text-sm text-gray-600">{item.label}</span>
               </button>
-              {isAdjustmentOpen && (
-                <div className="absolute right-0 mt-2 w-64 bg-white shadow-lg rounded-lg overflow-hidden z-10">
-                  <ColorAdjustmentSliders
-                    onAdjustmentsChange={handleAdjustmentsChange}
-                    adjustments={adjustments}
-                  />
-                </div>
-              )}
-            </div>
-            <div className="relative">
-              <button 
-                onClick={() => setShowColorBlindness(!showColorBlindness)}
-                className="flex items-center space-x-1 p-2 hover:bg-gray-100 rounded-md transition-colors duration-200"
-                title="Color Blindness Simulation"
-              >
-                <span className="text-sm text-gray-600">Color Blindness</span>
-                <ChevronDownIcon className="h-4 w-4 text-gray-500" />
-              </button>
-              {showColorBlindness && (
-                <div className="absolute right-0 mt-2 w-56 bg-white shadow-lg rounded-lg overflow-hidden z-10 border border-gray-200">
-                  <div className="p-2 border-b border-gray-200">
-                    <h3 className="text-sm font-semibold text-gray-700">Simulate Color Blindness</h3>
-                  </div>
-                  <div className="max-h-60 overflow-y-auto">
-                    {colorBlindnessOptions.map((option) => (
-                      <button
-                        key={option.value}
-                        onClick={() => setColorBlindnessType(option.value as ColorBlindnessType)}
-                        className={`w-full text-left px-4 py-2 text-sm ${
-                          colorBlindnessType === option.value
-                            ? 'bg-blue-50 text-blue-600'
-                            : 'text-gray-700 hover:bg-gray-50'
-                        } transition-colors duration-200`}
-                      >
-                        {option.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
+            ))}
           </div>
+          <button 
+            className="sm:hidden"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          >
+            <Bars3Icon className="h-6 w-6 text-gray-600" />
+          </button>
         </div>
       </header>
-      <ColorPalette
-        palette={getSimulatedPalette()}
-        lockedColors={lockedColors}
-        onToggleLock={toggleLock}
-        onColorClick={handleColorClick}
-      />
-      {selectedColor && (
-        <ColorDetailsModal 
-          color={selectedColor}
-          isOpen={isModalOpen}
-          onClose={closeModal}
-          onColorChange={handleColorChange}
-        />
+
+      {isMobileMenuOpen && (
+        <div className="sm:hidden bg-white shadow-md">
+          {mobileMenuItems.map((item, index) => (
+            <button 
+              key={index}
+              onClick={() => {
+                closeDropdowns();
+                item.action();
+                setIsMobileMenuOpen(false);
+              }}
+              className="w-full flex items-center space-x-2 p-4 hover:bg-gray-100"
+            >
+              <item.icon className="h-5 w-5 text-gray-600" />
+              <span className="text-sm text-gray-600">{item.label}</span>
+            </button>
+          ))}
+        </div>
       )}
-      {generateNewPaletteButton}
+
+      <div className="flex-grow flex flex-col sm:flex-row">
+        <ColorPalette
+          palette={getSimulatedPalette()}
+          lockedColors={lockedColors}
+          onToggleLock={toggleLock}
+          onColorClick={handleColorClick}
+        />
+        {selectedColor && (
+          <ColorDetailsModal 
+            color={selectedColor}
+            isOpen={isModalOpen}
+            onClose={closeModal}
+            onColorChange={handleColorChange}
+          />
+        )}
+        {isAdjustmentOpen && (
+          <div className="absolute right-4 top-16 w-64 bg-white shadow-lg rounded-lg overflow-hidden z-20">
+            <div className="flex justify-between items-center p-2 border-b">
+              <h3 className="text-sm font-semibold text-gray-800">Adjust Colors</h3>
+              <button onClick={() => setIsAdjustmentOpen(false)} className="text-gray-500 hover:text-gray-700">
+                <XMarkIcon className="h-5 w-5" />
+              </button>
+            </div>
+            <ColorAdjustmentSliders
+              onAdjustmentsChange={handleAdjustmentsChange}
+              adjustments={adjustments}
+            />
+          </div>
+        )}
+        {showColorBlindness && (
+          <div className="absolute right-4 top-16 w-56 bg-white shadow-lg rounded-lg overflow-hidden z-20 border border-gray-200">
+            <div className="flex justify-between items-center p-2 border-b border-gray-200">
+              <h3 className="text-sm font-semibold text-gray-700">Simulate Color Blindness</h3>
+              <button onClick={() => setShowColorBlindness(false)} className="text-gray-500 hover:text-gray-700">
+                <XMarkIcon className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="max-h-60 overflow-y-auto">
+              {colorBlindnessOptions.map((option) => (
+                <button
+                  key={option.value}
+                  onClick={() => setColorBlindnessType(option.value as ColorBlindnessType)}
+                  className={`w-full text-left px-4 py-2 text-sm ${
+                    colorBlindnessType === option.value
+                      ? 'bg-blue-50 text-blue-600'
+                      : 'text-gray-700 hover:bg-gray-50'
+                  } transition-colors duration-200`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+      
+      <button
+        onClick={generateNewPalette}
+        className="fixed bottom-4 right-4 bg-blue-600 text-white p-4 rounded-full shadow-lg hover:bg-blue-700 transition-colors duration-200 sm:hidden"
+        aria-label="Generate New Palette"
+      >
+        <SparklesIcon className="h-6 w-6" />
+      </button>
       <div 
         ref={exportRef} 
         className="fixed left-0 top-0 -z-10 w-[1000px] h-[500px] flex"
