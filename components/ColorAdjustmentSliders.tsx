@@ -1,10 +1,13 @@
 import React from 'react';
 import { AdjustmentValues } from '../app/utils/colorUtils';
+import { ArrowPathIcon } from '@heroicons/react/24/outline';
 
 interface ColorAdjustmentSlidersProps {
   onAdjustmentsChange: (adjustments: AdjustmentValues) => void;
   adjustments: AdjustmentValues;
 }
+
+const defaultAdjustments: AdjustmentValues = { h: 0, s: 0, b: 0, t: 0 };
 
 export default function ColorAdjustmentSliders({ 
   onAdjustmentsChange,
@@ -12,6 +15,10 @@ export default function ColorAdjustmentSliders({
 }: ColorAdjustmentSlidersProps) {
   const handleSliderChange = (property: keyof AdjustmentValues, value: number) => {
     onAdjustmentsChange({ ...adjustments, [property]: value });
+  };
+
+  const handleReset = () => {
+    onAdjustmentsChange(defaultAdjustments);
   };
 
   const sliders = [
@@ -27,7 +34,17 @@ export default function ColorAdjustmentSliders({
 
   return (
     <div className="p-4 bg-white rounded-md shadow-lg border border-gray-200 w-64">
-      <h3 className="text-lg font-semibold mb-3 text-gray-800">Adjust palette</h3>
+      <div className="flex justify-between items-center mb-3">
+        <h3 className="text-lg font-semibold text-gray-800">Adjust palette</h3>
+        <button
+          onClick={handleReset}
+          className="text-sm text-gray-600 hover:text-gray-800 flex items-center"
+          title="Reset adjustments"
+        >
+          <ArrowPathIcon className="h-4 w-4 mr-1" />
+          Reset
+        </button>
+      </div>
       <div className="space-y-4">
         {sliders.map((slider) => (
           <div key={slider.name} className="space-y-1">

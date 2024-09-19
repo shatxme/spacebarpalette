@@ -10,7 +10,7 @@ import {
   simulatePaletteColorBlindness,
   ColorBlindnessType
 } from './utils/colorUtils';
-import { PhotoIcon, CodeBracketIcon, ShareIcon, AdjustmentsHorizontalIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
+import { PhotoIcon, CodeBracketIcon, ShareIcon, AdjustmentsHorizontalIcon, ChevronDownIcon, SparklesIcon } from '@heroicons/react/24/outline';
 import html2canvas from 'html2canvas';
 
 const Logo = () => (
@@ -43,12 +43,18 @@ export default function Home() {
       5,
       50,
       [hueRange[0], hueRange[1]],
-      [],  // Pass an empty array instead of the current palette
+      palette,  // Pass the current palette instead of an empty array
       lockedColors
     );
 
-    // Apply adjustments to all colors, but only if adjustments is defined
-    const adjustedPalette = adjustments ? adjustPaletteHSL(newPalette, adjustments) : newPalette;
+    // Apply adjustments only to unlocked colors
+    const adjustedPalette = newPalette.map((color, index) => {
+      if (lockedColors[index]) {
+        return palette[index]; // Keep the locked color as is
+      } else {
+        return adjustPaletteHSL([color], adjustments)[0]; // Apply adjustments only to unlocked colors
+      }
+    });
 
     setPalette(adjustedPalette);
 
@@ -56,7 +62,7 @@ export default function Home() {
     setLockedColors(prev => 
       prev.length !== newPalette.length ? new Array(newPalette.length).fill(false) : prev
     );
-  }, [hueRange, lockedColors, adjustments]);
+  }, [hueRange, lockedColors, palette, adjustments]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -78,7 +84,7 @@ export default function Home() {
     } else if (palette.length === 0) {
       generateNewPalette();
     }
-  }, []);  // Keep the empty dependency array
+  }, [generateNewPalette, palette.length]);  // Add generateNewPalette and palette.length to the dependency array
 
   const sharePalette = useCallback(() => {
     const state = {
@@ -185,6 +191,16 @@ export default function Home() {
     { value: 'achromatopsia', label: 'Achromatopsia' }
   ];
 
+  const generateNewPaletteButton = (
+    <button
+      onClick={generateNewPalette}
+      className="fixed bottom-4 right-4 bg-blue-600 text-white p-4 rounded-full shadow-lg hover:bg-blue-700 transition-colors duration-200 sm:hidden"
+      aria-label="Generate New Palette"
+    >
+      <SparklesIcon className="h-6 w-6" />
+    </button>
+  );
+
   return (
     <main className="min-h-screen flex flex-col">
       <header className="bg-white shadow-sm p-4">
@@ -282,6 +298,7 @@ export default function Home() {
           onColorChange={handleColorChange}
         />
       )}
+      {generateNewPaletteButton}
       <div 
         ref={exportRef} 
         className="fixed left-0 top-0 -z-10 w-[1000px] h-[500px] flex"
