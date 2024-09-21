@@ -50,13 +50,14 @@ export default function ColorAdjustmentSliders({
         {sliders.map((slider) => (
           <div key={slider.name} className="space-y-1">
             <div className="flex justify-between">
-              <label className="text-sm font-medium text-gray-700">{slider.name}</label>
+              <label htmlFor={`${slider.property}-slider`} className="text-sm font-medium text-gray-700">{slider.name}</label>
               <span className="text-sm text-gray-500">
                 {adjustments[slider.property as keyof AdjustmentValues]}
               </span>
             </div>
             <div className={`h-2 rounded-full ${slider.style} relative`}>
               <input
+                id={`${slider.property}-slider`}
                 type="range"
                 min={slider.min}
                 max={slider.max}

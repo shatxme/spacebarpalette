@@ -44,17 +44,14 @@ function getComplementaryHue(hue: number): number {
   return (hue + 180) % 360;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function getAnalogousHues(hue: number): [number, number] {
   return [(hue - 30 + 360) % 360, (hue + 30) % 360];
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function getTriadicHues(hue: number): [number, number] {
   return [(hue + 120) % 360, (hue + 240) % 360];
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function getSplitComplementaryHues(hue: number): [number, number] {
   const complement = getComplementaryHue(hue);
   return [(complement - 30 + 360) % 360, (complement + 30) % 360];
@@ -180,17 +177,6 @@ export function generatePalette(
   return palette;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function isColorDark(hex: string): boolean {
-  const rgb = hexToRgb(hex);
-  const brightness = (rgb.r * 299 + rgb.g * 587 + rgb.b * 114) / 1000;
-  return brightness < 128;
-}
-
-// const isColorLight = (color: string): boolean => {
-//     // ... function implementation ...
-// };
-
 export function hexToRgb(hex: string) {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
   return result ? {
@@ -201,21 +187,20 @@ export function hexToRgb(hex: string) {
 }
 
 export function hexToHsl(hex: string): { h: number; s: number; l: number } {
-  // Remove the hash if it exists
-  hex = hex.replace(/^#/, '');
-
-  // Parse the hex values
-  const r = parseInt(hex.slice(0, 2), 16) / 255;
-  const g = parseInt(hex.slice(2, 4), 16) / 255;
-  const b = parseInt(hex.slice(4, 6), 16) / 255;
+  const rgb = hexToRgb(hex);
+  const r = rgb.r / 255;
+  const g = rgb.g / 255;
+  const b = rgb.b / 255;
 
   const max = Math.max(r, g, b);
   const min = Math.min(r, g, b);
   let h = 0;
-  let s = 0;
+  let s: number;
   const l = (max + min) / 2;
 
-  if (max !== min) {
+  if (max === min) {
+    h = s = 0; // achromatic
+  } else {
     const d = max - min;
     s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
     switch (max) {
@@ -226,65 +211,32 @@ export function hexToHsl(hex: string): { h: number; s: number; l: number } {
     h /= 6;
   }
 
-  return {
-    h: Math.round(h * 360),
-    s: Math.round(s * 100),
-    l: Math.round(l * 100)
-  };
+  return { h: h * 360, s: s * 100, l: l * 100 };
 }
 
 export function hexToCmyk(hex: string) {
-  const { r, g, b } = hexToRgb(hex);
-  let c = 1 - (r / 255);
-  let m = 1 - (g / 255);
-  let y = 1 - (b / 255);
-  let k = Math.min(c, m, y);
+  let { r, g, b } = hexToRgb(hex);
+  r /= 255;
+  g /= 255;
+  b /= 255;
 
-  c = Math.round(((c - k) / (1 - k)) * 100) || 0;
-  m = Math.round(((m - k) / (1 - k)) * 100) || 0;
-  y = Math.round(((y - k) / (1 - k)) * 100) || 0;
-  k = Math.round(k * 100);
+  const k = 1 - Math.max(r, g, b);
+  const c = (1 - r - k) / (1 - k);
+  const m = (1 - g - k) / (1 - k);
+  const y = (1 - b - k) / (1 - k);
 
-  return { c, m, y, k };
+  return {
+    c: Math.round(c * 100),
+    m: Math.round(m * 100),
+    y: Math.round(y * 100),
+    k: Math.round(k * 100)
+  };
 }
 
 export function getContrastColor(hexColor: string): string {
   const rgb = hexToRgb(hexColor);
   const brightness = (rgb.r * 299 + rgb.g * 587 + rgb.b * 114) / 1000;
-  return brightness > 128 ? '#000000' : '#FFFFFF';
-}
-
-export function getColorName(hex: string): string {
-  const colors: { [key: string]: string } = {
-    '#FF0000': 'Red', '#00FF00': 'Green', '#0000FF': 'Blue',
-    '#FFFF00': 'Yellow', '#FF00FF': 'Magenta', '#00FFFF': 'Cyan',
-    '#800000': 'Maroon', '#008000': 'Green', '#000080': 'Navy',
-    '#808000': 'Olive', '#800080': 'Purple', '#008080': 'Teal',
-    '#FFA500': 'Orange', '#FFC0CB': 'Pink', '#A52A2A': 'Brown',
-    '#808080': 'Gray', '#FFFFFF': 'White', '#000000': 'Black'
-  };
-
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-
-  let minDistance = Infinity;
-  let closestColor = '';
-
-  for (const [colorHex, colorName] of Object.entries(colors)) {
-    const cr = parseInt(colorHex.slice(1, 3), 16);
-    const cg = parseInt(colorHex.slice(3, 5), 16);
-    const cb = parseInt(colorHex.slice(5, 7), 16);
-
-    const distance = Math.sqrt((r - cr) ** 2 + (g - cg) ** 2 + (b - cb) ** 2);
-
-    if (distance < minDistance) {
-      minDistance = distance;
-      closestColor = colorName;
-    }
-  }
-
-  return closestColor;
+  return brightness > 200 ? '#000000' : '#FFFFFF';
 }
 
 export function adjustPaletteHSL(palette: string[], adjustments: AdjustmentValues): string[] {
@@ -313,8 +265,6 @@ export function adjustPaletteHSL(palette: string[], adjustments: AdjustmentValue
     return hslToHex(h, s, l);
   });
 }
-
-// Add these new types and functions at the end of the file
 
 export type ColorBlindnessType = 'protanopia' | 'deuteranopia' | 'tritanopia' | 'achromatopsia';
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { hexToRgb, hexToHsl, hexToCmyk } from '../app/utils/colorUtils';
+import { hexToRgb, hexToCmyk, hexToHsl } from '../app/utils/colorUtils';
 import { XMarkIcon, ClipboardDocumentIcon, PaintBrushIcon, CheckIcon } from '@heroicons/react/24/outline';
 
 interface ColorDetailsModalProps {
@@ -68,7 +68,7 @@ export default function ColorDetailsModal({ color, isOpen, onClose, onColorChang
       <div ref={modalRef} className="bg-gray-900 rounded-lg p-6 w-[320px] max-w-full text-white shadow-xl">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold">Color Details</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-white">
+          <button onClick={onClose} className="text-gray-400 hover:text-white" aria-label="Close">
             <XMarkIcon className="h-6 w-6" />
           </button>
         </div>
