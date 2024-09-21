@@ -75,6 +75,7 @@ export default function Home() {
         if (state.adjustments) {
           setAdjustments(state.adjustments);
         }
+        // Don't clear the URL parameters here
       } catch (error) {
         console.error('Failed to parse shared state:', error);
         generateNewPalette();
@@ -83,7 +84,7 @@ export default function Home() {
       generateNewPalette();
     }
     setIsLoading(false);
-  }, [generateNewPalette, palette.length]);
+  }, []);  // Remove generateNewPalette and palette.length from dependencies
 
   const toggleLock = useCallback((index: number) => {
     setLockedColors(prev => {
@@ -192,16 +193,14 @@ export default function Home() {
         (document.activeElement as HTMLElement)?.blur();
       }
       generateNewPalette();
+      // Clear the URL parameters after generating a new palette
+      window.history.replaceState({}, document.title, window.location.pathname);
     }
   }, [generateNewPalette, isModalOpen, isShareDropdownOpen]);
 
   useEffect(() => {
-    const handleKeyDownWithRef = (event: KeyboardEvent) => {
-      handleKeyDown(event);
-    };
-
-    window.addEventListener('keydown', handleKeyDownWithRef);
-    return () => window.removeEventListener('keydown', handleKeyDownWithRef);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
 
   return (
