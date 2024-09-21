@@ -1,25 +1,26 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { AdjustmentValues } from '../app/utils/colorUtils';
 import { ArrowPathIcon } from '@heroicons/react/24/outline';
 
 interface ColorAdjustmentSlidersProps {
-  onAdjustmentsChange: (adjustments: AdjustmentValues) => void;
   adjustments: AdjustmentValues;
+  onAdjustmentsChange: (adjustments: AdjustmentValues) => void;
 }
 
 const defaultAdjustments: AdjustmentValues = { h: 0, s: 0, b: 0, t: 0 };
 
 export default function ColorAdjustmentSliders({ 
-  onAdjustmentsChange,
-  adjustments 
+  adjustments,
+  onAdjustmentsChange
 }: ColorAdjustmentSlidersProps) {
-  const handleSliderChange = (property: keyof AdjustmentValues, value: number) => {
-    onAdjustmentsChange({ ...adjustments, [property]: value });
-  };
+  const handleSliderChange = useCallback((property: keyof AdjustmentValues, value: number) => {
+    const newAdjustments = { ...adjustments, [property]: value };
+    onAdjustmentsChange(newAdjustments);
+  }, [adjustments, onAdjustmentsChange]);
 
-  const handleReset = () => {
+  const handleReset = useCallback(() => {
     onAdjustmentsChange(defaultAdjustments);
-  };
+  }, [onAdjustmentsChange]);
 
   const sliders = [
     { name: 'Hue', property: 'h', min: -180, max: 180, default: 0,

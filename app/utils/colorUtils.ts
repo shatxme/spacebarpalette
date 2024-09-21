@@ -112,69 +112,19 @@ export function generatePalette(
   let palette: string[] = [];
   const [minHue, maxHue] = hueRange;
 
-  const generateColor = (hue: number, isAccent: boolean = false, isNeutral: boolean = false) => {
-    let saturation: number;
-    let lightness: number;
-
-    if (isNeutral) {
-      saturation = getRandomInt(0, 10);
-      lightness = getRandomInt(10, 90);
-    } else if (isAccent) {
-      saturation = getRandomInt(80, 100);
-      lightness = getRandomInt(40, 60);
-    } else {
-      saturation = getRandomInt(40, 80);
-      const minBrightness = Math.max(30, brightness - 20);
-      const maxBrightness = Math.min(70, brightness + 20);
-      lightness = getRandomInt(minBrightness, maxBrightness);
-    }
-
-    return { h: hue, s: saturation, l: lightness };
-  };
-
-  // Use golden ratio to determine the base hue
-  let baseHue = getRandomInt(minHue, maxHue);
-  baseHue = (baseHue + GOLDEN_RATIO * 360) % 360;
-
-  const harmonyType = getRandomInt(0, 3); // Randomly select a harmony type
-
-  let harmonicHues: number[];
-  switch (harmonyType) {
-    case 0: // Complementary
-      harmonicHues = [baseHue, getComplementaryHue(baseHue)];
-      break;
-    case 1: // Analogous
-      harmonicHues = [baseHue, ...getAnalogousHues(baseHue)];
-      break;
-    case 2: // Triadic
-      harmonicHues = [baseHue, ...getTriadicHues(baseHue)];
-      break;
-    case 3: // Split-complementary
-      harmonicHues = [baseHue, ...getSplitComplementaryHues(baseHue)];
-      break;
-    default:
-      harmonicHues = [baseHue];
-  }
-
-  const accentIndex = getRandomInt(0, count - 1);
-  const neutralIndex = (accentIndex + getRandomInt(1, count - 1)) % count;
-
   for (let i = 0; i < count; i++) {
     if (lockedColors[i] && currentPalette[i]) {
       palette.push(currentPalette[i]);
     } else {
-      const hue = (harmonicHues[i % harmonicHues.length] + i * GOLDEN_RATIO * 360) % 360;
-      const isAccent = i === accentIndex;
-      const isNeutral = i === neutralIndex;
-      const { h, s, l } = generateColor(hue, isAccent, isNeutral);
-      palette.push(hslToHex(h, s, l));
+      // Generate a new color
+      const hue = getRandomInt(minHue, maxHue);
+      const saturation = getRandomInt(40, 100);
+      const lightness = getRandomInt(Math.max(0, brightness - 20), Math.min(100, brightness + 20));
+      palette.push(hslToHex(hue, saturation, lightness));
     }
   }
 
-  // Ensure sufficient contrast
-  palette = ensureSufficientContrast(palette);
-
-  return palette;
+  return ensureSufficientContrast(palette);
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars

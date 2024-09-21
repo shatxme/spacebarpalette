@@ -1,5 +1,5 @@
 'use client'
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import ColorPalette from '../components/ColorPalette';
 import ColorDetailsModal from '../components/ColorDetailsModal';
 import ColorAdjustmentSliders from '../components/ColorAdjustmentSliders';
@@ -10,8 +10,10 @@ import {
   simulatePaletteColorBlindness,
   ColorBlindnessType
 } from './utils/colorUtils';
-import { PhotoIcon, CodeBracketIcon, ShareIcon, AdjustmentsHorizontalIcon, ChevronDownIcon, SparklesIcon, Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
+import { PhotoIcon, CodeBracketIcon, ShareIcon, AdjustmentsHorizontalIcon, ChevronDownIcon, SparklesIcon, Bars3Icon, XMarkIcon, DocumentIcon, EyeIcon } from '@heroicons/react/24/outline';
 import html2canvas from 'html2canvas';
+import { exportToPDF } from './utils/shareUtils';
+import { Menu, Transition } from '@headlessui/react';
 
 const Logo = () => (
   <div className="flex items-center space-x-3">
@@ -41,19 +43,19 @@ export default function Home() {
 
   const generateNewPalette = useCallback(() => {
     const newPalette = generatePalette(
-      5,
+      palette.length || 5,  // Use current palette length or default to 5
       50,
       [hueRange[0], hueRange[1]],
-      palette,  // Pass the current palette instead of an empty array
+      [],  // Pass an empty array instead of the current palette
       lockedColors
     );
 
-    // Apply adjustments only to unlocked colors
+    // Apply adjustments to all colors, but keep locked colors from the previous palette
     const adjustedPalette = newPalette.map((color, index) => {
       if (lockedColors[index]) {
         return palette[index]; // Keep the locked color as is
       } else {
-        return adjustPaletteHSL([color], adjustments)[0]; // Apply adjustments only to unlocked colors
+        return adjustPaletteHSL([color], adjustments)[0]; // Apply adjustments to new colors
       }
     });
 
@@ -85,7 +87,7 @@ export default function Home() {
     } else if (palette.length === 0) {
       generateNewPalette();
     }
-  }, [generateNewPalette, palette.length]);  // Add generateNewPalette and palette.length to the dependency array
+  }, [generateNewPalette, palette.length]);
 
   const sharePalette = useCallback(() => {
     const state = {
@@ -176,11 +178,6 @@ export default function Home() {
     setSelectedColor(newColor);
   };
 
-  const handleAdjustmentsChange = (newAdjustments: AdjustmentValues) => {
-    setAdjustments(newAdjustments);
-    // Do not apply adjustments to the current palette
-  };
-
   const getSimulatedPalette = useCallback(() => {
     return showColorBlindness ? simulatePaletteColorBlindness(palette, colorBlindnessType) : palette;
   }, [palette, showColorBlindness, colorBlindnessType]);
@@ -197,13 +194,33 @@ export default function Home() {
     setShowColorBlindness(false);
   }, []);
 
-  const mobileMenuItems = [
-    { icon: PhotoIcon, label: 'Export PNG', action: exportToPNG },
-    { icon: CodeBracketIcon, label: 'Export JSON', action: exportToJSON },
-    { icon: ShareIcon, label: 'Share', action: sharePalette },
-    { icon: AdjustmentsHorizontalIcon, label: 'Adjust', action: () => setIsAdjustmentOpen(!isAdjustmentOpen) },
-    { icon: ChevronDownIcon, label: 'Color Blindness', action: () => setShowColorBlindness(!showColorBlindness) },
+  const handleExportPDF = useCallback(() => {
+    exportToPDF(palette);
+  }, [palette]);
+
+  const shareMenuItems = [
+    { label: 'Export PNG', action: exportToPNG, icon: PhotoIcon },
+    { label: 'Export PDF', action: handleExportPDF, icon: DocumentIcon },
+    { label: 'Export JSON', action: exportToJSON, icon: CodeBracketIcon },
+    { label: 'Copy Link', action: sharePalette, icon: ShareIcon },
   ];
+
+  const menuItems = [
+    { 
+      icon: ShareIcon, 
+      label: 'Share', 
+      action: () => {}, // This will be handled by the dropdown
+      dropdown: shareMenuItems 
+    },
+    { icon: AdjustmentsHorizontalIcon, label: 'Adjust', action: () => setIsAdjustmentOpen(!isAdjustmentOpen) },
+    { icon: EyeIcon, label: 'Color Blindness', action: () => setShowColorBlindness(!showColorBlindness) },
+  ];
+
+  const handleAdjustmentsChange = useCallback((newAdjustments: AdjustmentValues) => {
+    setAdjustments(newAdjustments);
+  }, []);
+
+  const memoizedOnAdjustmentsChange = useMemo(() => handleAdjustmentsChange, [handleAdjustmentsChange]);
 
   return (
     <main className="min-h-screen flex flex-col">
@@ -211,20 +228,56 @@ export default function Home() {
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <Logo />
           <div className="hidden sm:flex items-center space-x-4">
-            {/* Desktop menu items */}
-            {mobileMenuItems.map((item, index) => (
-              <button 
-                key={index}
-                onClick={() => {
-                  closeDropdowns();
-                  item.action();
-                }}
-                className="flex items-center space-x-1 p-1 hover:bg-gray-100 rounded" 
-                title={item.label}
-              >
-                <item.icon className="h-5 w-5 text-gray-600" />
-                <span className="text-sm text-gray-600">{item.label}</span>
-              </button>
+            {menuItems.map((item, index) => (
+              <React.Fragment key={item.label}>
+                {item.dropdown ? (
+                  <div className="relative z-50">
+                    <Menu as="div" className="relative inline-block text-left">
+                      <Menu.Button className="flex items-center space-x-1 p-2 hover:bg-gray-100 rounded">
+                        <item.icon className="h-5 w-5 text-gray-600" />
+                        <span className="text-sm text-gray-600">{item.label}</span>
+                        <ChevronDownIcon className="h-4 w-4 text-gray-600" />
+                      </Menu.Button>
+                      <Transition
+                        enter="transition ease-out duration-100"
+                        enterFrom="transform opacity-0 scale-95"
+                        enterTo="transform opacity-100 scale-100"
+                        leave="transition ease-in duration-75"
+                        leaveFrom="transform opacity-100 scale-100"
+                        leaveTo="transform opacity-0 scale-95"
+                      >
+                        <Menu.Items className="absolute right-0 mt-2 w-56 origin-top-right divide-y divide-gray-100 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50">
+                          {item.dropdown.map((subItem, subIndex) => (
+                            <Menu.Item key={subIndex}>
+                              {({ active }) => (
+                                <button
+                                  className={`${
+                                    active ? 'bg-gray-100 text-gray-900' : 'text-gray-700'
+                                  } group flex w-full items-center px-2 py-2 text-sm`}
+                                  onClick={subItem.action}
+                                >
+                                  <subItem.icon className="mr-2 h-5 w-5" aria-hidden="true" />
+                                  {subItem.label}
+                                </button>
+                              )}
+                            </Menu.Item>
+                          ))}
+                        </Menu.Items>
+                      </Transition>
+                    </Menu>
+                  </div>
+                ) : (
+                  <button 
+                    key={index}
+                    onClick={item.action}
+                    className="flex items-center space-x-1 p-2 hover:bg-gray-100 rounded" 
+                    title={item.label}
+                  >
+                    <item.icon className="h-5 w-5 text-gray-600" />
+                    <span className="text-sm text-gray-600">{item.label}</span>
+                  </button>
+                )}
+              </React.Fragment>
             ))}
           </div>
           <button 
@@ -238,19 +291,39 @@ export default function Home() {
 
       {isMobileMenuOpen && (
         <div className="sm:hidden bg-white shadow-md">
-          {mobileMenuItems.map((item, index) => (
-            <button 
-              key={index}
-              onClick={() => {
-                closeDropdowns();
-                item.action();
-                setIsMobileMenuOpen(false);
-              }}
-              className="w-full flex items-center space-x-2 p-4 hover:bg-gray-100"
-            >
-              <item.icon className="h-5 w-5 text-gray-600" />
-              <span className="text-sm text-gray-600">{item.label}</span>
-            </button>
+          {menuItems.map((item, index) => (
+            <React.Fragment key={item.label}>
+              {item.dropdown ? (
+                <div className="px-4 py-2 border-b border-gray-200">
+                  <p className="text-sm font-medium text-gray-700 mb-2">{item.label}</p>
+                  {item.dropdown.map((subItem, subIndex) => (
+                    <button
+                      key={subIndex}
+                      onClick={() => {
+                        subItem.action();
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className="w-full flex items-center space-x-2 p-2 hover:bg-gray-100 rounded"
+                    >
+                      <subItem.icon className="h-5 w-5 text-gray-600" />
+                      <span className="text-sm text-gray-600">{subItem.label}</span>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <button 
+                  key={index}
+                  onClick={() => {
+                    item.action();
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="w-full flex items-center space-x-2 p-4 hover:bg-gray-100 border-b border-gray-200"
+                >
+                  <item.icon className="h-5 w-5 text-gray-600" />
+                  <span className="text-sm text-gray-600">{item.label}</span>
+                </button>
+              )}
+            </React.Fragment>
           ))}
         </div>
       )}
@@ -279,8 +352,8 @@ export default function Home() {
               </button>
             </div>
             <ColorAdjustmentSliders
-              onAdjustmentsChange={handleAdjustmentsChange}
               adjustments={adjustments}
+              onAdjustmentsChange={memoizedOnAdjustmentsChange}
             />
           </div>
         )}
