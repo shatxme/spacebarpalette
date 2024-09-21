@@ -40,13 +40,14 @@ export default function Home() {
   const [showColorBlindness, setShowColorBlindness] = useState(false);
   const [colorBlindnessType, setColorBlindnessType] = useState<ColorBlindnessType>('protanopia');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isShareDropdownOpen, setIsShareDropdownOpen] = useState(false);
 
   const generateNewPalette = useCallback(() => {
     const newPalette = generatePalette(
-      palette.length || 5,  // Use current palette length or default to 5
+      palette.length || 5,
       50,
       [hueRange[0], hueRange[1]],
-      [],  // Pass an empty array instead of the current palette
+      [],
       lockedColors
     );
 
@@ -60,11 +61,7 @@ export default function Home() {
     });
 
     setPalette(adjustedPalette);
-
-    // Ensure lockedColors array matches the palette length
-    setLockedColors(prev => 
-      prev.length !== newPalette.length ? new Array(newPalette.length).fill(false) : prev
-    );
+    setIsShareDropdownOpen(false); // Close the share dropdown when generating a new palette
   }, [hueRange, lockedColors, palette, adjustments]);
 
   useEffect(() => {
@@ -110,12 +107,18 @@ export default function Home() {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.code === 'Space' && !isModalOpen) {
         event.preventDefault();
+        if (isShareDropdownOpen) {
+          setIsShareDropdownOpen(false);
+        }
+        // Remove focus from any active element
+        (document.activeElement as HTMLElement).blur();
+        // Generate new palette
         generateNewPalette();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [generateNewPalette, isModalOpen]);
+  }, [generateNewPalette, isModalOpen, isShareDropdownOpen]);
 
   const toggleLock = useCallback((index: number) => {
     setLockedColors(prev => {
@@ -192,6 +195,7 @@ export default function Home() {
   const closeDropdowns = useCallback(() => {
     setIsAdjustmentOpen(false);
     setShowColorBlindness(false);
+    setIsShareDropdownOpen(false);
   }, []);
 
   const handleExportPDF = useCallback(() => {
@@ -212,8 +216,14 @@ export default function Home() {
       action: () => {}, // This will be handled by the dropdown
       dropdown: shareMenuItems 
     },
-    { icon: AdjustmentsHorizontalIcon, label: 'Adjust', action: () => setIsAdjustmentOpen(!isAdjustmentOpen) },
-    { icon: EyeIcon, label: 'Color Blindness', action: () => setShowColorBlindness(!showColorBlindness) },
+    { icon: AdjustmentsHorizontalIcon, label: 'Adjust', action: () => {
+      closeDropdowns();
+      setIsAdjustmentOpen(prev => !prev);
+    }},
+    { icon: EyeIcon, label: 'Color Blindness', action: () => {
+      closeDropdowns();
+      setShowColorBlindness(prev => !prev);
+    }},
   ];
 
   const handleAdjustmentsChange = useCallback((newAdjustments: AdjustmentValues) => {
@@ -233,37 +243,59 @@ export default function Home() {
                 {item.dropdown ? (
                   <div className="relative z-50">
                     <Menu as="div" className="relative inline-block text-left">
-                      <Menu.Button className="flex items-center space-x-1 p-2 hover:bg-gray-100 rounded">
-                        <item.icon className="h-5 w-5 text-gray-600" />
-                        <span className="text-sm text-gray-600">{item.label}</span>
-                        <ChevronDownIcon className="h-4 w-4 text-gray-600" />
-                      </Menu.Button>
-                      <Transition
-                        enter="transition ease-out duration-100"
-                        enterFrom="transform opacity-0 scale-95"
-                        enterTo="transform opacity-100 scale-100"
-                        leave="transition ease-in duration-75"
-                        leaveFrom="transform opacity-100 scale-100"
-                        leaveTo="transform opacity-0 scale-95"
-                      >
-                        <Menu.Items className="absolute right-0 mt-2 w-56 origin-top-right divide-y divide-gray-100 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50">
-                          {item.dropdown.map((subItem, subIndex) => (
-                            <Menu.Item key={subIndex}>
-                              {({ active }) => (
-                                <button
-                                  className={`${
-                                    active ? 'bg-gray-100 text-gray-900' : 'text-gray-700'
-                                  } group flex w-full items-center px-2 py-2 text-sm`}
-                                  onClick={subItem.action}
-                                >
-                                  <subItem.icon className="mr-2 h-5 w-5" aria-hidden="true" />
-                                  {subItem.label}
-                                </button>
-                              )}
-                            </Menu.Item>
-                          ))}
-                        </Menu.Items>
-                      </Transition>
+                      {() => (
+                        <>
+                          <Menu.Button 
+                            className="flex items-center space-x-1 p-2 hover:bg-gray-100 rounded"
+                            onClick={() => setIsShareDropdownOpen(!isShareDropdownOpen)}
+                            onKeyDown={(e) => {
+                              if (e.code === 'Space') {
+                                e.preventDefault();
+                                setIsShareDropdownOpen(false);
+                                e.currentTarget.blur(); // Remove focus when spacebar is pressed
+                              }
+                            }}
+                          >
+                            <item.icon className="h-5 w-5 text-gray-600" />
+                            <span className="text-sm text-gray-600">{item.label}</span>
+                            <ChevronDownIcon className="h-4 w-4 text-gray-600" />
+                          </Menu.Button>
+                          <Transition
+                            show={isShareDropdownOpen}
+                            as={React.Fragment}
+                            enter="transition ease-out duration-100"
+                            enterFrom="transform opacity-0 scale-95"
+                            enterTo="transform opacity-100 scale-100"
+                            leave="transition ease-in duration-75"
+                            leaveFrom="transform opacity-100 scale-100"
+                            leaveTo="transform opacity-0 scale-95"
+                          >
+                            <Menu.Items 
+                              className="absolute right-0 mt-2 w-56 origin-top-right divide-y divide-gray-100 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50"
+                            >
+                              {item.dropdown.map((subItem, subIndex) => (
+                                <Menu.Item key={subIndex}>
+                                  {({ active }) => (
+                                    <button
+                                      className={`${
+                                        active ? 'bg-gray-100 text-gray-900' : 'text-gray-700'
+                                      } group flex w-full items-center px-2 py-2 text-sm`}
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        subItem.action();
+                                        setIsShareDropdownOpen(false);
+                                      }}
+                                    >
+                                      <subItem.icon className="mr-2 h-5 w-5" aria-hidden="true" />
+                                      {subItem.label}
+                                    </button>
+                                  )}
+                                </Menu.Item>
+                              ))}
+                            </Menu.Items>
+                          </Transition>
+                        </>
+                      )}
                     </Menu>
                   </div>
                 ) : (
@@ -282,7 +314,10 @@ export default function Home() {
           </div>
           <button 
             className="sm:hidden"
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            onClick={() => {
+              closeDropdowns();
+              setIsMobileMenuOpen(!isMobileMenuOpen);
+            }}
           >
             <Bars3Icon className="h-6 w-6 text-gray-600" />
           </button>

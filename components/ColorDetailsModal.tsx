@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { hexToRgb, hexToHsl, hexToCmyk } from '../app/utils/colorUtils';
-import { XMarkIcon, ClipboardDocumentIcon, PaintBrushIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, ClipboardDocumentIcon, PaintBrushIcon, CheckIcon } from '@heroicons/react/24/outline';
 
 interface ColorDetailsModalProps {
   color: string;
@@ -11,14 +11,34 @@ interface ColorDetailsModalProps {
 
 export default function ColorDetailsModal({ color, isOpen, onClose, onColorChange }: ColorDetailsModalProps) {
   const [localColor, setLocalColor] = useState(color);
+  const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const colorPickerRef = useRef<HTMLInputElement>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setLocalColor(color);
   }, [color]);
 
-  const copyToClipboard = (text: string) => {
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
+        onClose();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen, onClose]);
+
+  const copyToClipboard = (text: string, index: number) => {
     navigator.clipboard.writeText(text);
+    setCopiedIndex(index);
+    setTimeout(() => setCopiedIndex(null), 2000); // Reset after 2 seconds
   };
 
   if (!isOpen) return null;
@@ -37,9 +57,15 @@ export default function ColorDetailsModal({ color, isOpen, onClose, onColorChang
     colorPickerRef.current?.click();
   };
 
+  const colorFormats = [
+    { label: 'RGB', value: `${rgb.r}, ${rgb.g}, ${rgb.b}` },
+    { label: 'HSL', value: `${Math.round(hsl.h)}, ${Math.round(hsl.s)}, ${Math.round(hsl.l)}` },
+    { label: 'CMYK', value: `${Math.round(cmyk.c)}, ${Math.round(cmyk.m)}, ${Math.round(cmyk.y)}, ${Math.round(cmyk.k)}` }
+  ];
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-gray-900 rounded-lg p-6 w-[320px] max-w-full text-white shadow-xl">
+      <div ref={modalRef} className="bg-gray-900 rounded-lg p-6 w-[320px] max-w-full text-white shadow-xl">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold">Color Details</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-white">
@@ -80,20 +106,24 @@ export default function ColorDetailsModal({ color, isOpen, onClose, onColorChang
           />
         </div>
         <div className="space-y-2">
-          {[
-            { label: 'RGB', value: `${rgb.r}, ${rgb.g}, ${rgb.b}` },
-            { label: 'HSL', value: `${hsl.h}°, ${hsl.s}%, ${hsl.l}%` },
-            { label: 'CMYK', value: `${cmyk.c}%, ${cmyk.m}%, ${cmyk.y}%, ${cmyk.k}%` }
-          ].map((item) => (
+          {colorFormats.map((item, index) => (
             <div key={item.label} className="flex items-center justify-between bg-gray-800 p-2 rounded-md">
               <span className="text-sm font-medium text-gray-300">{item.label}</span>
               <div className="flex items-center space-x-2">
                 <span className="text-sm font-mono">{item.value}</span>
                 <button
-                  onClick={() => copyToClipboard(item.value)}
-                  className="text-gray-400 hover:text-white"
+                  onClick={() => copyToClipboard(item.value, index)}
+                  className={`p-1 rounded transition-all duration-200 ${
+                    copiedIndex === index 
+                      ? 'bg-white bg-opacity-20' 
+                      : 'hover:bg-white hover:bg-opacity-10'
+                  }`}
                 >
-                  <ClipboardDocumentIcon className="h-5 w-5" />
+                  {copiedIndex === index ? (
+                    <CheckIcon className="h-5 w-5 text-white" />
+                  ) : (
+                    <ClipboardDocumentIcon className="h-5 w-5 text-white" />
+                  )}
                 </button>
               </div>
             </div>
