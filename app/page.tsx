@@ -40,7 +40,6 @@ export default function Home() {
   const [isShareDropdownOpen, setIsShareDropdownOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const exportRef = useRef<HTMLDivElement>(null);
-  const shareButtonRef = useRef<HTMLButtonElement>(null);
   const mainRef = useRef<HTMLElement>(null);
 
   const generateNewPalette = useCallback(() => {
@@ -62,7 +61,6 @@ export default function Home() {
 
     setPalette(adjustedPalette);
     setIsShareDropdownOpen(false);
-    shareButtonRef.current?.blur();
     mainRef.current?.focus();
   }, [lockedColors, palette, adjustments]);
 
@@ -86,20 +84,6 @@ export default function Home() {
     }
     setIsLoading(false);
   }, [generateNewPalette, palette.length]);
-
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.code === 'Space' && !isModalOpen) {
-        event.preventDefault();
-        setIsShareDropdownOpen(false);
-        shareButtonRef.current?.blur();
-        mainRef.current?.focus();
-        generateNewPalette();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [generateNewPalette, isModalOpen]);
 
   const toggleLock = useCallback((index: number) => {
     setLockedColors(prev => {
@@ -147,15 +131,30 @@ export default function Home() {
     setIsShareDropdownOpen(false);
   }, []);
 
-  const handleExportPNG = useCallback((e?: React.MouseEvent | React.KeyboardEvent) => exportToPNG(palette, e), [palette]);
-  const handleExportJSON = useCallback((e?: React.MouseEvent | React.KeyboardEvent) => exportToJSON(palette, adjustments, e), [palette, adjustments]);
-  const handleSharePalette = useCallback(() => sharePalette(palette, lockedColors, adjustments), [palette, lockedColors, adjustments]);
-  const handleExportPDF = useCallback((e?: React.MouseEvent | React.KeyboardEvent) => exportToPDF(palette, e), [palette]);
+  const handleExport = useCallback((exportFunction: Function) => {
+    return (event?: React.MouseEvent<HTMLButtonElement>) => {
+      if (event) {
+        event.preventDefault();
+      }
+      exportFunction(palette, adjustments);
+      setIsShareDropdownOpen(false);
+    };
+  }, [palette, adjustments]);
+
+  const handleSharePalette = useCallback((event?: React.MouseEvent<HTMLButtonElement>) => {
+    if (event) {
+      event.preventDefault();
+    }
+    sharePalette(palette, lockedColors, adjustments);
+    setIsShareDropdownOpen(false);
+    // Remove focus from the Share button after copying the link
+    (document.activeElement as HTMLElement)?.blur();
+  }, [palette, lockedColors, adjustments]);
 
   const shareMenuItems = [
-    { label: 'Export PNG', action: handleExportPNG, icon: PhotoIcon },
-    { label: 'Export PDF', action: handleExportPDF, icon: DocumentIcon },
-    { label: 'Export JSON', action: handleExportJSON, icon: CodeBracketIcon },
+    { label: 'Export PNG', action: handleExport(exportToPNG), icon: PhotoIcon },
+    { label: 'Export PDF', action: handleExport(exportToPDF), icon: DocumentIcon },
+    { label: 'Export JSON', action: handleExport(exportToJSON), icon: CodeBracketIcon },
     { label: 'Copy Link', action: handleSharePalette, icon: ShareIcon },
   ];
 
@@ -180,15 +179,30 @@ export default function Home() {
     setAdjustments(newAdjustments);
   }, []);
 
-  const handleShareClick = useCallback((event: React.MouseEvent) => {
+  const handleShareClick = useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
     setIsShareDropdownOpen(prev => !prev);
   }, []);
 
-  const handleShareOption = useCallback((action: (e?: React.MouseEvent | React.KeyboardEvent) => void, e?: React.MouseEvent | React.KeyboardEvent) => {
-    action(e);
-    setIsShareDropdownOpen(false);
-  }, []);
+  const handleKeyDown = useCallback((event: KeyboardEvent) => {
+    if (event.code === 'Space' && !isModalOpen) {
+      event.preventDefault();
+      if (isShareDropdownOpen) {
+        setIsShareDropdownOpen(false);
+        (document.activeElement as HTMLElement)?.blur();
+      }
+      generateNewPalette();
+    }
+  }, [generateNewPalette, isModalOpen, isShareDropdownOpen]);
+
+  useEffect(() => {
+    const handleKeyDownWithRef = (event: KeyboardEvent) => {
+      handleKeyDown(event);
+    };
+
+    window.addEventListener('keydown', handleKeyDownWithRef);
+    return () => window.removeEventListener('keydown', handleKeyDownWithRef);
+  }, [handleKeyDown]);
 
   return (
     <main ref={mainRef} tabIndex={-1} className="min-h-screen flex flex-col outline-none">
@@ -204,7 +218,6 @@ export default function Home() {
                       {() => (
                         <>
                           <Menu.Button 
-                            ref={shareButtonRef}
                             className="flex items-center space-x-1 p-2 hover:bg-gray-100 rounded"
                             onClick={handleShareClick}
                           >
@@ -233,7 +246,7 @@ export default function Home() {
                                       className={`${
                                         active ? 'bg-gray-100 text-gray-900' : 'text-gray-700'
                                       } group flex w-full items-center px-2 py-2 text-sm`}
-                                      onClick={(e) => handleShareOption(subItem.action, e)}
+                                      onClick={subItem.action}
                                     >
                                       <subItem.icon className="mr-2 h-5 w-5" aria-hidden="true" />
                                       {subItem.label}

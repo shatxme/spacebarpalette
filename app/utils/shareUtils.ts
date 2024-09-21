@@ -13,6 +13,9 @@ export function sharePalette(palette: string[], lockedColors: boolean[], adjustm
     console.error('Failed to copy share link: ', err);
   });
 
+  // Remove focus from the Share button after copying the link
+  (document.activeElement as HTMLElement)?.blur();
+
   // Return false to prevent default behavior
   return false;
 }
@@ -20,8 +23,8 @@ export function sharePalette(palette: string[], lockedColors: boolean[], adjustm
 const createExportPalette = (palette: string[]) => {
   const div = document.createElement('div');
   div.style.display = 'flex';
-  div.style.width = '1200px'; // Increased width to accommodate more text
-  div.style.height = '600px'; // Increased height for better proportions
+  div.style.width = '1200px';
+  div.style.height = '600px';
 
   palette.forEach((color) => {
     const colorDiv = document.createElement('div');
@@ -41,6 +44,7 @@ const createExportPalette = (palette: string[]) => {
       textDiv.style.fontWeight = '600';
       textDiv.style.marginBottom = '5px';
       textDiv.style.textAlign = 'center';
+      textDiv.style.letterSpacing = '0.05em';
       textDiv.style.textShadow = `0 0 3px ${getContrastColor(color) === '#FFFFFF' ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.3)'}`;
       textDiv.innerHTML = `${label}<br>${value}`;
       return textDiv;
@@ -54,7 +58,7 @@ const createExportPalette = (palette: string[]) => {
     colorDiv.appendChild(rgbText);
 
     const cmyk = hexToCmyk(color);
-    const cmykText = createColorText('CMYK', `${cmyk.c}%, ${cmyk.m}%, ${cmyk.y}%, ${cmyk.k}%`);
+    const cmykText = createColorText('CMYK', `${cmyk.c}, ${cmyk.m}, ${cmyk.y}, ${cmyk.k}`);
     colorDiv.appendChild(cmykText);
 
     div.appendChild(colorDiv);
@@ -63,7 +67,7 @@ const createExportPalette = (palette: string[]) => {
   return div;
 };
 
-export const exportToPNG = async (palette: string[], event?: React.MouseEvent | React.KeyboardEvent) => {
+export const exportToPNG = async (palette: string[], adjustments: AdjustmentValues, event?: React.MouseEvent | React.KeyboardEvent) => {
   if (event) {
     event.preventDefault();
   }
@@ -73,7 +77,7 @@ export const exportToPNG = async (palette: string[], event?: React.MouseEvent | 
   try {
     const canvas = await html2canvas(exportDiv, {
       backgroundColor: null,
-      scale: 2, // Increased scale for better quality
+      scale: 2,
     });
 
     const link = document.createElement('a');
@@ -85,13 +89,12 @@ export const exportToPNG = async (palette: string[], event?: React.MouseEvent | 
   } finally {
     document.body.removeChild(exportDiv);
   }
+
+  // Remove focus from the button after exporting
+  (document.activeElement as HTMLElement)?.blur();
 };
 
-export const exportToJSON = (
-  palette: string[], 
-  adjustments: AdjustmentValues,
-  event?: React.MouseEvent | React.KeyboardEvent
-) => {
+export const exportToJSON = (palette: string[], adjustments: AdjustmentValues, event?: React.MouseEvent | React.KeyboardEvent) => {
   if (event) {
     event.preventDefault();
   }
@@ -110,9 +113,12 @@ export const exportToJSON = (
   link.download = 'color-palette.json';
   link.href = URL.createObjectURL(blob);
   link.click();
+
+  // Remove focus from the button after exporting
+  (document.activeElement as HTMLElement)?.blur();
 };
 
-export const exportToPDF = async (palette: string[], event?: React.MouseEvent | React.KeyboardEvent) => {
+export const exportToPDF = async (palette: string[], adjustments: AdjustmentValues, event?: React.MouseEvent | React.KeyboardEvent) => {
   if (event) {
     event.preventDefault();
   }
@@ -121,13 +127,13 @@ export const exportToPDF = async (palette: string[], event?: React.MouseEvent | 
 
   try {
     const canvas = await html2canvas(exportDiv, {
-      scale: 2, // Increased scale for better quality
+      scale: 2,
     });
 
     const pdf = new jsPDF({
       orientation: 'landscape',
       unit: 'px',
-      format: [canvas.width / 2, canvas.height / 2] // Adjust PDF size to match the canvas
+      format: [canvas.width / 2, canvas.height / 2]
     });
 
     pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, canvas.width / 2, canvas.height / 2);
@@ -137,4 +143,7 @@ export const exportToPDF = async (palette: string[], event?: React.MouseEvent | 
   } finally {
     document.body.removeChild(exportDiv);
   }
+
+  // Remove focus from the button after exporting
+  (document.activeElement as HTMLElement)?.blur();
 };
