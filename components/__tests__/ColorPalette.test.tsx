@@ -120,11 +120,48 @@ describe('ColorPalette', () => {
       />
     );
 
-    const addButton = screen.getByRole('button', { name: /add column/i });
+    const addButton = screen.getByText('Add Color');
     fireEvent.click(addButton);
 
     expect(mockOnAddColumn).toHaveBeenCalled();
   });
 
-  // ... (other existing tests)
+  it('does not render add button when palette has 10 colors', () => {
+    const tenColorPalette = Array(10).fill('#000000');
+    const tenLockedColors = Array(10).fill(false);
+
+    render(
+      <ColorPalette
+        palette={tenColorPalette}
+        lockedColors={tenLockedColors}
+        onToggleLock={mockOnToggleLock}
+        onColorClick={mockOnColorClick}
+        onReorder={mockOnReorder}
+        onAddColumn={mockOnAddColumn}
+        onRemoveColumn={mockOnRemoveColumn}
+      />
+    );
+
+    const addButton = screen.queryByText('Add Color');
+    expect(addButton).not.toBeInTheDocument();
+  });
+
+  it('renders the correct number of color elements', () => {
+    render(
+      <ColorPalette
+        palette={mockPalette}
+        lockedColors={mockLockedColors}
+        onToggleLock={mockOnToggleLock}
+        onColorClick={mockOnColorClick}
+        onReorder={mockOnReorder}
+        onAddColumn={mockOnAddColumn}
+        onRemoveColumn={mockOnRemoveColumn}
+      />
+    );
+
+    const colorElements = screen.getAllByTestId('color-element');
+    expect(colorElements).toHaveLength(mockPalette.length);
+  });
+
+  // Add more tests as needed
 });
