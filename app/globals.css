@@ -95,3 +95,31 @@ input[type="range"]::-moz-range-track {
   background: transparent;
   border-radius: 4px;
 }
+
+/* Add these styles to your existing globals.css */
+
+@media (max-width: 640px) {
+  #color-palette {
+    flex-direction: column;
+  }
+
+  #color-palette > div {
+    min-height: 100px;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 1024px) {
+  #color-palette > div {
+    flex-basis: 50%;
+  }
+}
+
+@media (min-width: 1025px) {
+  #color-palette {
+    flex-wrap: nowrap;
+  }
+
+  #color-palette > div {
+    flex: 1;
+  }
+}

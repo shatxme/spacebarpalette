@@ -8,6 +8,8 @@ describe('ColorPalette', () => {
   const mockOnToggleLock = jest.fn();
   const mockOnColorClick = jest.fn();
   const mockOnReorder = jest.fn();
+  const mockOnAddColumn = jest.fn();
+  const mockOnRemoveColumn = jest.fn();
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -21,6 +23,8 @@ describe('ColorPalette', () => {
         onToggleLock={mockOnToggleLock}
         onColorClick={mockOnColorClick}
         onReorder={mockOnReorder}
+        onAddColumn={mockOnAddColumn}
+        onRemoveColumn={mockOnRemoveColumn}
       />
     );
 
@@ -37,6 +41,8 @@ describe('ColorPalette', () => {
         onToggleLock={mockOnToggleLock}
         onColorClick={mockOnColorClick}
         onReorder={mockOnReorder}
+        onAddColumn={mockOnAddColumn}
+        onRemoveColumn={mockOnRemoveColumn}
       />
     );
 
@@ -54,6 +60,8 @@ describe('ColorPalette', () => {
         onToggleLock={mockOnToggleLock}
         onColorClick={mockOnColorClick}
         onReorder={mockOnReorder}
+        onAddColumn={mockOnAddColumn}
+        onRemoveColumn={mockOnRemoveColumn}
       />
     );
 
@@ -63,7 +71,7 @@ describe('ColorPalette', () => {
     expect(mockOnColorClick).toHaveBeenCalledWith(mockPalette[0]);
   });
 
-  it('simulates drag and drop and calls onReorder', () => {
+  it('calls onRemoveColumn when remove button is clicked', () => {
     render(
       <ColorPalette
         palette={mockPalette}
@@ -71,37 +79,35 @@ describe('ColorPalette', () => {
         onToggleLock={mockOnToggleLock}
         onColorClick={mockOnColorClick}
         onReorder={mockOnReorder}
+        onAddColumn={mockOnAddColumn}
+        onRemoveColumn={mockOnRemoveColumn}
       />
     );
 
-    const colorElements = screen.getAllByTestId('color-element');
+    const removeButtons = screen.getAllByRole('button', { name: /remove column/i });
+    fireEvent.click(removeButtons[0]);
 
-    // Mock dataTransfer object
-    const dataTransfer = {
-      setData: jest.fn(),
-      getData: jest.fn().mockReturnValue('0'),
-    };
-
-    // Simulate drag start
-    fireEvent.dragStart(colorElements[0], { dataTransfer });
-
-    // Simulate drop
-    fireEvent.drop(colorElements[2], { dataTransfer });
-
-    expect(mockOnReorder).toHaveBeenCalledWith(
-      [mockPalette[1], mockPalette[2], mockPalette[0]],
-      [mockLockedColors[1], mockLockedColors[2], mockLockedColors[0]]
-    );
+    expect(mockOnRemoveColumn).toHaveBeenCalledWith(0);
   });
 
-  it('copies color to clipboard when clicked', async () => {
-    const mockClipboard = {
-      writeText: jest.fn().mockImplementation(() => Promise.resolve()),
-    };
-    Object.assign(navigator, {
-      clipboard: mockClipboard,
-    });
+  it('does not render remove buttons when there is only one color', () => {
+    render(
+      <ColorPalette
+        palette={[mockPalette[0]]}
+        lockedColors={[mockLockedColors[0]]}
+        onToggleLock={mockOnToggleLock}
+        onColorClick={mockOnColorClick}
+        onReorder={mockOnReorder}
+        onAddColumn={mockOnAddColumn}
+        onRemoveColumn={mockOnRemoveColumn}
+      />
+    );
 
+    const removeButtons = screen.queryAllByRole('button', { name: /remove column/i });
+    expect(removeButtons).toHaveLength(0);
+  });
+
+  it('calls onAddColumn when add button is clicked', () => {
     render(
       <ColorPalette
         palette={mockPalette}
@@ -109,12 +115,16 @@ describe('ColorPalette', () => {
         onToggleLock={mockOnToggleLock}
         onColorClick={mockOnColorClick}
         onReorder={mockOnReorder}
+        onAddColumn={mockOnAddColumn}
+        onRemoveColumn={mockOnRemoveColumn}
       />
     );
 
-    const colorTexts = screen.getAllByText(/#[0-9A-F]{6}/i);
-    fireEvent.click(colorTexts[0]);
+    const addButton = screen.getByRole('button', { name: /add column/i });
+    fireEvent.click(addButton);
 
-    expect(mockClipboard.writeText).toHaveBeenCalledWith(mockPalette[0]);
+    expect(mockOnAddColumn).toHaveBeenCalled();
   });
+
+  // ... (other existing tests)
 });

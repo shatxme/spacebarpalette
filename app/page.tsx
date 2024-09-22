@@ -13,6 +13,7 @@ import {
 import { PhotoIcon, CodeBracketIcon, ShareIcon, AdjustmentsHorizontalIcon, ChevronDownIcon, SparklesIcon, Bars3Icon, XMarkIcon, DocumentIcon, EyeIcon } from '@heroicons/react/24/outline';
 import { exportToPNG, exportToJSON, sharePalette, exportToPDF } from './utils/shareUtils';
 import { Menu, Transition } from '@headlessui/react';
+import { debounce } from 'lodash';
 
 const Logo = () => (
   <div className="flex items-center space-x-3">
@@ -48,8 +49,15 @@ export default function Home() {
   const exportRef = useRef<HTMLDivElement>(null);
   const mainRef = useRef<HTMLElement>(null);
   const [colorItems, setColorItems] = useState<ColorItem[]>([]);
+  const [lastGenerationTime, setLastGenerationTime] = useState(0);
+  const cooldownPeriod = 200; // 200ms cooldown
 
   const generateNewPalette = useCallback(() => {
+    const currentTime = Date.now();
+    if (currentTime - lastGenerationTime < cooldownPeriod) {
+      return; // Don't generate if we're still in the cooldown period
+    }
+
     console.log('Generating new palette');
     console.log('Current palette:', palette);
     console.log('Locked colors:', lockedColors);
@@ -82,7 +90,8 @@ export default function Home() {
     })));
     setIsShareDropdownOpen(false);
     mainRef.current?.focus();
-  }, [lockedColors, palette, adjustments]);
+    setLastGenerationTime(currentTime);
+  }, [lockedColors, palette, adjustments, lastGenerationTime]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -223,13 +232,14 @@ export default function Home() {
         setIsShareDropdownOpen(false);
       }
       generateNewPalette();
-      window.history.replaceState({}, document.title, window.location.pathname);
     }
   }, [generateNewPalette, isModalOpen, isShareDropdownOpen]);
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
   }, [handleKeyDown]);
 
   const handleReorder = useCallback((newPalette: string[], newLockedColors: boolean[]) => {
@@ -267,6 +277,27 @@ export default function Home() {
   const closeAdjustmentPanel = () => {
     setIsAdjustmentPanelOpen(false);
   };
+
+  const handleAddColumn = useCallback(() => {
+    if (palette.length < 10) {
+      const newColor = generatePalette(1, 50, [0, 360])[0];
+      setPalette([...palette, newColor]);
+      setLockedColors([...lockedColors, false]);
+      setColorItems([...colorItems, {
+        color: newColor,
+        isLocked: false,
+        id: `${newColor}-${palette.length}-${Date.now()}`
+      }]);
+    }
+  }, [palette, lockedColors, colorItems]);
+
+  const handleRemoveColumn = useCallback((index: number) => {
+    if (palette.length > 1) {
+      setPalette(prev => prev.filter((_, i) => i !== index));
+      setLockedColors(prev => prev.filter((_, i) => i !== index));
+      setColorItems(prev => prev.filter((_, i) => i !== index));
+    }
+  }, [palette.length]);
 
   return (
     <main ref={mainRef} tabIndex={-1} className="min-h-screen flex flex-col outline-none">
@@ -404,6 +435,8 @@ export default function Home() {
             onToggleLock={handleToggleLock}
             onColorClick={handleColorClick}
             onReorder={handleReorder}
+            onAddColumn={handleAddColumn}
+            onRemoveColumn={handleRemoveColumn}
           />
         )}
         {selectedColor && (

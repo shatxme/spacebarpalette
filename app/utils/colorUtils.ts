@@ -109,6 +109,14 @@ export function generatePalette(
   currentPalette: string[] = [],
   lockedColors: boolean[] = []
 ): string[] {
+  if (count === 1) {
+    const [minHue, maxHue] = hueRange;
+    const hue = getRandomInt(minHue, maxHue);
+    const saturation = getRandomInt(40, 80);
+    const lightness = getRandomInt(Math.max(30, brightness - 20), Math.min(70, brightness + 20));
+    return [hslToHex(hue, saturation, lightness)];
+  }
+
   let palette: string[] = [];
   const [minHue, maxHue] = hueRange;
 
