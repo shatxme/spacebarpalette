@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { LockClosedIcon, LockOpenIcon, ClipboardIcon, CheckIcon, MinusIcon, PlusIcon } from '@heroicons/react/24/solid';
 import { getContrastColor } from '../app/utils/colorUtils';
 
@@ -23,6 +23,7 @@ export default function ColorPalette({
 }: ColorPaletteProps) {
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const copyToClipboard = (text: string, index: number) => {
     navigator.clipboard.writeText(text);
@@ -32,8 +33,12 @@ export default function ColorPalette({
 
   const handleDragStart = useCallback((e: React.DragEvent<HTMLDivElement>, index: number) => {
     setDraggedIndex(index);
-    e.dataTransfer.setData('text/plain', index.toString());
-    e.dataTransfer.effectAllowed = 'move';
+    if (e.dataTransfer) {
+      e.dataTransfer.setData('text/plain', index.toString());
+      e.dataTransfer.effectAllowed = 'move';
+    }
+    const target = e.target as HTMLElement;
+    target.style.opacity = '0.5';
   }, []);
 
   const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
@@ -58,6 +63,12 @@ export default function ColorPalette({
     setDraggedIndex(null);
   }, [palette, lockedColors, onReorder]);
 
+  const handleDragEnd = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    target.style.opacity = '1';
+    setDraggedIndex(null);
+  }, []);
+
   const handleToggleLock = useCallback((e: React.MouseEvent, index: number) => {
     e.stopPropagation();
     onToggleLock(index);
@@ -65,28 +76,22 @@ export default function ColorPalette({
 
   return (
     <div className="flex-1 flex flex-col">
-      <div id="color-palette" className="flex-1 flex flex-wrap">
+      <div id="color-palette" ref={containerRef} className="flex-1 flex flex-wrap relative">
         {palette.map((color, index) => (
           <div
             key={`${color}-${index}`}
             data-testid="color-element"
-            className={`flex-1 flex flex-col justify-between cursor-move relative transition-transform duration-200 min-h-[120px] ${
-              draggedIndex === index ? 'scale-95' : ''
-            }`}
+            className="flex-1 flex flex-col justify-between cursor-move relative min-h-[120px]"
             style={{ backgroundColor: color }}
             onClick={(e) => {
               e.preventDefault();
               onColorClick(color);
             }}
-            onKeyDown={(e) => {
-              if (e.code === 'Space') {
-                e.preventDefault();
-              }
-            }}
             draggable
             onDragStart={(e) => handleDragStart(e, index)}
             onDragOver={handleDragOver}
             onDrop={(e) => handleDrop(e, index)}
+            onDragEnd={handleDragEnd}
           >
             <div className="flex justify-between items-start p-2">
               <button
