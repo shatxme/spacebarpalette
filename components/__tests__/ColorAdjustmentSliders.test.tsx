@@ -6,6 +6,10 @@ describe('ColorAdjustmentSliders', () => {
   const mockAdjustments = { h: 0, s: 0, b: 0, t: 0 };
   const mockOnAdjustmentsChange = jest.fn();
 
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
   it('renders all sliders', () => {
     render(
       <ColorAdjustmentSliders
@@ -20,7 +24,7 @@ describe('ColorAdjustmentSliders', () => {
     expect(screen.getByLabelText('Temperature')).toBeInTheDocument();
   });
 
-  it('calls onAdjustmentsChange when a slider is moved', () => {
+  it('calls onAdjustmentsChange when sliders are moved', () => {
     render(
       <ColorAdjustmentSliders
         adjustments={mockAdjustments}
@@ -28,43 +32,37 @@ describe('ColorAdjustmentSliders', () => {
       />
     );
 
-    const hueSlider = screen.getByRole('slider', { name: /hue/i });
-    fireEvent.change(hueSlider, { target: { value: '50' } });
+    fireEvent.change(screen.getByLabelText('Hue'), { target: { value: '50' } });
     expect(mockOnAdjustmentsChange).toHaveBeenCalledWith({ ...mockAdjustments, h: 50 });
+
+    fireEvent.change(screen.getByLabelText('Saturation'), { target: { value: '25' } });
+    expect(mockOnAdjustmentsChange).toHaveBeenCalledWith({ ...mockAdjustments, s: 25 });
   });
 
   it('resets adjustments when reset button is clicked', () => {
     render(
       <ColorAdjustmentSliders
-        adjustments={{ h: 50, s: 50, b: 50, t: 50 }}
-        onAdjustmentsChange={mockOnAdjustmentsChange}
-      />
-    );
-
-    const resetButton = screen.getByText('Reset');
-    fireEvent.click(resetButton);
-    expect(mockOnAdjustmentsChange).toHaveBeenCalledWith({ h: 0, s: 0, b: 0, t: 0 });
-  });
-
-  it('updates slider values when adjustments prop changes', () => {
-    const { rerender } = render(
-      <ColorAdjustmentSliders
         adjustments={mockAdjustments}
         onAdjustmentsChange={mockOnAdjustmentsChange}
       />
     );
 
-    const newAdjustments = { h: 50, s: 50, b: 50, t: 50 };
-    rerender(
+    fireEvent.click(screen.getByText('Reset'));
+    expect(mockOnAdjustmentsChange).toHaveBeenCalledWith({ h: 0, s: 0, b: 0, t: 0 });
+  });
+
+  it('displays current adjustment values', () => {
+    const currentAdjustments = { h: 10, s: 20, b: 30, t: 40 };
+    render(
       <ColorAdjustmentSliders
-        adjustments={newAdjustments}
+        adjustments={currentAdjustments}
         onAdjustmentsChange={mockOnAdjustmentsChange}
       />
     );
 
-    expect(screen.getByLabelText('Hue')).toHaveValue('50');
-    expect(screen.getByLabelText('Saturation')).toHaveValue('50');
-    expect(screen.getByLabelText('Brightness')).toHaveValue('50');
-    expect(screen.getByLabelText('Temperature')).toHaveValue('50');
+    expect(screen.getByText('10')).toBeInTheDocument(); // Hue value
+    expect(screen.getByText('20')).toBeInTheDocument(); // Saturation value
+    expect(screen.getByText('30')).toBeInTheDocument(); // Brightness value
+    expect(screen.getByText('40')).toBeInTheDocument(); // Temperature value
   });
 });

@@ -27,12 +27,18 @@ const Logo = () => (
   </div>
 );
 
+interface ColorItem {
+  color: string;
+  isLocked: boolean;
+  id: string;
+}
+
 export default function Home() {
   const [palette, setPalette] = useState<string[]>([]);
   const [lockedColors, setLockedColors] = useState<boolean[]>([]);
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isAdjustmentOpen, setIsAdjustmentOpen] = useState(false);
+  const [isAdjustmentPanelOpen, setIsAdjustmentPanelOpen] = useState(false);
   const [adjustments, setAdjustments] = useState<AdjustmentValues>({ h: 0, s: 0, b: 0, t: 0 });
   const [showColorBlindness, setShowColorBlindness] = useState(false);
   const [colorBlindnessType, setColorBlindnessType] = useState<ColorBlindnessType>('protanopia');
@@ -41,15 +47,22 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(true);
   const exportRef = useRef<HTMLDivElement>(null);
   const mainRef = useRef<HTMLElement>(null);
+  const [colorItems, setColorItems] = useState<ColorItem[]>([]);
 
   const generateNewPalette = useCallback(() => {
+    console.log('Generating new palette');
+    console.log('Current palette:', palette);
+    console.log('Locked colors:', lockedColors);
+
     const newPalette = generatePalette(
       palette.length || 5,
       50,
       [0, 360],
-      [],
+      palette,
       lockedColors
     );
+
+    console.log('New palette before adjustments:', newPalette);
 
     const adjustedPalette = newPalette.map((color, index) => {
       if (lockedColors[index]) {
@@ -59,7 +72,14 @@ export default function Home() {
       }
     });
 
+    console.log('Adjusted palette:', adjustedPalette);
+
     setPalette(adjustedPalette);
+    setColorItems(adjustedPalette.map((color, index) => ({
+      color,
+      isLocked: lockedColors[index],
+      id: `${color}-${index}-${Date.now()}` // Add a timestamp to ensure unique IDs
+    })));
     setIsShareDropdownOpen(false);
     mainRef.current?.focus();
   }, [lockedColors, palette, adjustments]);
@@ -75,7 +95,11 @@ export default function Home() {
         if (state.adjustments) {
           setAdjustments(state.adjustments);
         }
-        // Don't clear the URL parameters here
+        setColorItems(state.palette.map((color: string, index: number) => ({
+          color,
+          isLocked: state.lockedColors[index],
+          id: `${color}-${index}`
+        })));
       } catch (error) {
         console.error('Failed to parse shared state:', error);
         generateNewPalette();
@@ -84,7 +108,7 @@ export default function Home() {
       generateNewPalette();
     }
     setIsLoading(false);
-  }, []);  // Remove generateNewPalette and palette.length from dependencies
+  }, []);
 
   const toggleLock = useCallback((index: number) => {
     setLockedColors(prev => {
@@ -116,7 +140,14 @@ export default function Home() {
   };
 
   const getSimulatedPalette = useCallback(() => {
-    return showColorBlindness ? simulatePaletteColorBlindness(palette, colorBlindnessType) : palette;
+    if (showColorBlindness) {
+      console.log('Simulating color blindness:', colorBlindnessType);
+      const simulatedPalette = simulatePaletteColorBlindness(palette, colorBlindnessType);
+      console.log('Original palette:', palette);
+      console.log('Simulated palette:', simulatedPalette);
+      return simulatedPalette;
+    }
+    return palette;
   }, [palette, showColorBlindness, colorBlindnessType]);
 
   const colorBlindnessOptions = [
@@ -127,7 +158,7 @@ export default function Home() {
   ];
 
   const closeDropdowns = useCallback(() => {
-    setIsAdjustmentOpen(false);
+    setIsAdjustmentPanelOpen(false);
     setShowColorBlindness(false);
     setIsShareDropdownOpen(false);
   }, []);
@@ -148,7 +179,6 @@ export default function Home() {
     }
     sharePalette(palette, lockedColors, adjustments);
     setIsShareDropdownOpen(false);
-    // Remove focus from the Share button after copying the link
     (document.activeElement as HTMLElement)?.blur();
   }, [palette, lockedColors, adjustments]);
 
@@ -168,7 +198,7 @@ export default function Home() {
     },
     { icon: AdjustmentsHorizontalIcon, label: 'Adjust', action: () => {
       closeDropdowns();
-      setIsAdjustmentOpen(prev => !prev);
+      setIsAdjustmentPanelOpen(prev => !prev);
     }},
     { icon: EyeIcon, label: 'Color Blindness', action: () => {
       closeDropdowns();
@@ -188,12 +218,11 @@ export default function Home() {
   const handleKeyDown = useCallback((event: KeyboardEvent) => {
     if (event.code === 'Space' && !isModalOpen) {
       event.preventDefault();
+      console.log('Spacebar pressed');
       if (isShareDropdownOpen) {
         setIsShareDropdownOpen(false);
-        (document.activeElement as HTMLElement)?.blur();
       }
       generateNewPalette();
-      // Clear the URL parameters after generating a new palette
       window.history.replaceState({}, document.title, window.location.pathname);
     }
   }, [generateNewPalette, isModalOpen, isShareDropdownOpen]);
@@ -202,6 +231,42 @@ export default function Home() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
+
+  const handleReorder = useCallback((newPalette: string[], newLockedColors: boolean[]) => {
+    console.log('Reordering:', newPalette, newLockedColors);
+    setPalette(newPalette);
+    setLockedColors(newLockedColors);
+    setColorItems(newPalette.map((color, index) => ({
+      color,
+      isLocked: newLockedColors[index],
+      id: `${color}-${index}-${Date.now()}`
+    })));
+  }, []);
+
+  const handleToggleLock = useCallback((index: number) => {
+    console.log('Toggling lock:', index);
+    setLockedColors(prev => {
+      const newLockedColors = [...prev];
+      newLockedColors[index] = !newLockedColors[index];
+      return newLockedColors;
+    });
+    setColorItems(prev => {
+      const newColorItems = [...prev];
+      newColorItems[index] = {
+        ...newColorItems[index],
+        isLocked: !newColorItems[index].isLocked
+      };
+      return newColorItems;
+    });
+  }, []);
+
+  const toggleAdjustmentPanel = () => {
+    setIsAdjustmentPanelOpen(!isAdjustmentPanelOpen);
+  };
+
+  const closeAdjustmentPanel = () => {
+    setIsAdjustmentPanelOpen(false);
+  };
 
   return (
     <main ref={mainRef} tabIndex={-1} className="min-h-screen flex flex-col outline-none">
@@ -245,7 +310,10 @@ export default function Home() {
                                       className={`${
                                         active ? 'bg-gray-100 text-gray-900' : 'text-gray-700'
                                       } group flex w-full items-center px-2 py-2 text-sm`}
-                                      onClick={subItem.action}
+                                      onClick={(event) => {
+                                        subItem.action(event);
+                                        setIsShareDropdownOpen(false);
+                                      }}
                                     >
                                       <subItem.icon className="mr-2 h-5 w-5" aria-hidden="true" />
                                       {subItem.label}
@@ -325,20 +393,19 @@ export default function Home() {
       )}
 
       <div className="flex-grow flex flex-col sm:flex-row">
-        <div ref={exportRef} className="flex-1 flex flex-col sm:flex-row">
-          {isLoading ? (
-            <div className="flex items-center justify-center h-full">
-              <p className="text-gray-500">Loading...</p>
-            </div>
-          ) : (
-            <ColorPalette
-              palette={getSimulatedPalette()}
-              lockedColors={lockedColors}
-              onToggleLock={toggleLock}
-              onColorClick={handleColorClick}
-            />
-          )}
-        </div>
+        {isLoading ? (
+          <div className="flex items-center justify-center h-full">
+            <p className="text-gray-500">Loading...</p>
+          </div>
+        ) : (
+          <ColorPalette
+            palette={getSimulatedPalette()}
+            lockedColors={colorItems.map(item => item.isLocked)}
+            onToggleLock={handleToggleLock}
+            onColorClick={handleColorClick}
+            onReorder={handleReorder}
+          />
+        )}
         {selectedColor && (
           <ColorDetailsModal 
             color={selectedColor}
@@ -347,11 +414,11 @@ export default function Home() {
             onColorChange={handleColorChange}
           />
         )}
-        {isAdjustmentOpen && (
+        {isAdjustmentPanelOpen && (
           <div className="absolute right-4 top-16 w-64 bg-white shadow-lg rounded-lg overflow-hidden z-20">
             <div className="flex justify-between items-center p-2 border-b">
-              <h3 className="text-sm font-semibold text-gray-800">Adjust Colors</h3>
-              <button onClick={() => setIsAdjustmentOpen(false)} className="text-gray-500 hover:text-gray-700">
+              <h3 className="text-sm font-semibold text-gray-800">Adjust Palette</h3>
+              <button onClick={closeAdjustmentPanel} className="text-gray-500 hover:text-gray-700"aria-label="Close">
                 <XMarkIcon className="h-5 w-5" />
               </button>
             </div>

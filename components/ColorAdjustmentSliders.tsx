@@ -11,7 +11,7 @@ const defaultAdjustments: AdjustmentValues = { h: 0, s: 0, b: 0, t: 0 };
 
 export default function ColorAdjustmentSliders({ 
   adjustments,
-  onAdjustmentsChange
+  onAdjustmentsChange,
 }: ColorAdjustmentSlidersProps) {
   const handleSliderChange = useCallback((property: keyof AdjustmentValues, value: number) => {
     const newAdjustments = { ...adjustments, [property]: value };
@@ -36,7 +36,6 @@ export default function ColorAdjustmentSliders({
   return (
     <div className="p-4 bg-white rounded-md shadow-lg border border-gray-200 w-64">
       <div className="flex justify-between items-center mb-3">
-        <h3 className="text-lg font-semibold text-gray-800">Adjust palette</h3>
         <button
           onClick={handleReset}
           className="text-sm text-gray-600 hover:text-gray-800 flex items-center"

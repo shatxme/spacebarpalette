@@ -268,6 +268,13 @@ export function adjustPaletteHSL(palette: string[], adjustments: AdjustmentValue
 
 export type ColorBlindnessType = 'protanopia' | 'deuteranopia' | 'tritanopia' | 'achromatopsia';
 
+export function simulatePaletteColorBlindness(palette: string[], type: ColorBlindnessType): string[] {
+  console.log('Simulating color blindness for palette:', palette, 'Type:', type);
+  const simulatedPalette = palette.map(color => simulateColorBlindness(color, type));
+  console.log('Simulated palette:', simulatedPalette);
+  return simulatedPalette;
+}
+
 function simulateColorBlindness(hex: string, type: ColorBlindnessType): string {
   const rgb = hexToRgb(hex);
   let r = rgb.r / 255;
@@ -310,8 +317,4 @@ function simulateColorBlindness(hex: string, type: ColorBlindnessType): string {
   // Convert back to hex
   const toHex = (n: number) => Math.round(n * 255).toString(16).padStart(2, '0');
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
-}
-
-export function simulatePaletteColorBlindness(palette: string[], type: ColorBlindnessType): string[] {
-  return palette.map(color => simulateColorBlindness(color, type));
 }
