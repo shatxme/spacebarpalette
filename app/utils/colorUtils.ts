@@ -67,14 +67,10 @@ function getLuminance(r: number, g: number, b: number): number {
   return a[0] * 0.2126 + a[1] * 0.7152 + a[2] * 0.0722;
 }
 
-function getContrastRatio(color1: string, color2: string): number {
-  const rgb1 = hexToRgb(color1);
-  const rgb2 = hexToRgb(color2);
-  const l1 = getLuminance(rgb1.r, rgb1.g, rgb1.b);
-  const l2 = getLuminance(rgb2.r, rgb2.g, rgb2.b);
-  const lighter = Math.max(l1, l2);
-  const darker = Math.min(l1, l2);
-  return (lighter + 0.05) / (darker + 0.05);
+export function getContrastRatio(color1: string, color2: string): number {
+  const l1 = getLuminance(hexToRgb(color1).r, hexToRgb(color1).g, hexToRgb(color1).b);
+  const l2 = getLuminance(hexToRgb(color2).r, hexToRgb(color2).g, hexToRgb(color2).b);
+  return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
 }
 
 function ensureSufficientContrast(palette: string[]): string[] {
@@ -243,8 +239,15 @@ export function hexToCmyk(hex: string) {
 
 export function getContrastColor(hexColor: string): string {
   const rgb = hexToRgb(hexColor);
-  const brightness = (rgb.r * 299 + rgb.g * 587 + rgb.b * 114) / 1000;
-  return brightness > 200 ? '#000000' : '#FFFFFF';
+  // Using the relative luminance formula
+  const luminance = (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) / 255;
+
+  console.log(`Color: ${hexColor}`);
+  console.log(`Luminance: ${luminance}`);
+
+  // Use a threshold of 0.55 instead of 0.5
+  // This will treat more colors as "dark", including #808080
+  return luminance > 0.55 ? '#000000' : '#FFFFFF';
 }
 
 export function adjustPaletteHSL(palette: string[], adjustments: AdjustmentValues): string[] {

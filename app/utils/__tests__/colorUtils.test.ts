@@ -21,11 +21,26 @@ describe('colorUtils', () => {
     it('returns white for dark colors', () => {
       expect(getContrastColor('#000000')).toBe('#FFFFFF');
       expect(getContrastColor('#123456')).toBe('#FFFFFF');
+      expect(getContrastColor('#660000')).toBe('#FFFFFF');
+      expect(getContrastColor('#808080')).toBe('#FFFFFF'); // Medium gray
     });
 
     it('returns black for light colors', () => {
       expect(getContrastColor('#FFFFFF')).toBe('#000000');
       expect(getContrastColor('#FFFF00')).toBe('#000000');
+      expect(getContrastColor('#00FF00')).toBe('#000000');
+      expect(getContrastColor('#C0C0C0')).toBe('#000000'); // Light gray
+    });
+
+    it('handles specific vibrant colors correctly', () => {
+      expect(getContrastColor('#bd3efe')).toBe('#FFFFFF');
+      expect(getContrastColor('#00FFFF')).toBe('#000000'); // Cyan
+      expect(getContrastColor('#FF00FF')).toBe('#FFFFFF'); // Magenta
+    });
+
+    it('handles edge cases correctly', () => {
+      expect(getContrastColor('#808080')).toBe('#FFFFFF'); // Medium gray
+      expect(getContrastColor('#909090')).toBe('#000000'); // Slightly lighter than medium gray
     });
   });
 });
