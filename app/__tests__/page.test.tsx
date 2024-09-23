@@ -210,9 +210,9 @@ describe('Home', () => {
     // Add assertions to check the result of the interaction
   });
 
-  it('handles user interactions', () => {
-    const { getByText } = render(<Home />);
-    fireEvent.click(getByText('Generate Palette'));
+  it('handles user interactions', async () => {
+    const { getByLabelText } = render(<Home />);
+    fireEvent.click(getByLabelText('Generate New Palette'));
     // Add assertions to check the result of the interaction
   });
 });

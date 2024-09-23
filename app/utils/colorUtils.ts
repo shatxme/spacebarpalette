@@ -40,19 +40,19 @@ function getRandomInt(min: number, max: number): number {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-function getComplementaryHue(hue: number): number {
+export function getComplementaryHue(hue: number): number {
   return (hue + 180) % 360;
 }
 
-function getAnalogousHues(hue: number): [number, number] {
+export function getAnalogousHues(hue: number): [number, number] {
   return [(hue - 30 + 360) % 360, (hue + 30) % 360];
 }
 
-function getTriadicHues(hue: number): [number, number] {
+export function getTriadicHues(hue: number): [number, number] {
   return [(hue + 120) % 360, (hue + 240) % 360];
 }
 
-function getSplitComplementaryHues(hue: number): [number, number] {
+export function getSplitComplementaryHues(hue: number): [number, number] {
   const complement = getComplementaryHue(hue);
   return [(complement - 30 + 360) % 360, (complement + 30) % 360];
 }
