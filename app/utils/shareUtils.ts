@@ -2,6 +2,9 @@ import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { AdjustmentValues, hexToRgb, hexToCmyk, getContrastColor } from './colorUtils';
 
+// Add this at the top of the file
+export const isBrowser = typeof window !== 'undefined';
+
 export function sharePalette(palette: string[], lockedColors: boolean[], adjustments: AdjustmentValues) {
   const state = { palette, lockedColors, adjustments };
   const stateString = btoa(JSON.stringify(state));
@@ -20,7 +23,16 @@ export function sharePalette(palette: string[], lockedColors: boolean[], adjustm
   return false;
 }
 
+// Modify the createExportPalette function
 const createExportPalette = (palette: string[]) => {
+  if (!isBrowser) {
+    // Return a mock object for non-browser environments
+    return {
+      style: {},
+      appendChild: jest.fn(),
+    } as unknown as HTMLDivElement;
+  }
+
   const div = document.createElement('div');
   div.style.display = 'flex';
   div.style.width = '1200px';
@@ -67,7 +79,9 @@ const createExportPalette = (palette: string[]) => {
   return div;
 };
 
+// Modify the export functions to check for browser environment
 export const exportToPNG = async (palette: string[], adjustments: AdjustmentValues, event?: React.MouseEvent | React.KeyboardEvent) => {
+  if (!isBrowser) return;
   if (event) {
     event.preventDefault();
   }
@@ -95,6 +109,7 @@ export const exportToPNG = async (palette: string[], adjustments: AdjustmentValu
 };
 
 export const exportToJSON = (palette: string[], adjustments: AdjustmentValues, event?: React.MouseEvent | React.KeyboardEvent) => {
+  if (!isBrowser) return;
   if (event) {
     event.preventDefault();
   }
@@ -119,6 +134,7 @@ export const exportToJSON = (palette: string[], adjustments: AdjustmentValues, e
 };
 
 export const exportToPDF = async (palette: string[], adjustments: AdjustmentValues, event?: React.MouseEvent | React.KeyboardEvent) => {
+  if (!isBrowser) return;
   if (event) {
     event.preventDefault();
   }

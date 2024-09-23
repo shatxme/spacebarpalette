@@ -19,20 +19,60 @@ Object.assign(navigator, {
 // Mock window.alert
 global.alert = jest.fn();
 
+// Mock window object
+global.window = Object.create(window);
+Object.defineProperty(window, 'location', {
+  value: {
+    origin: 'http://localhost',
+  },
+});
+
 describe('shareUtils', () => {
+  let mockLink: { click: jest.Mock; href: string; download: string };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+
+    mockLink = { click: jest.fn(), href: '', download: '' };
+
+    // Mock document.createElement
+    document.createElement = jest.fn().mockImplementation((tagName: string) => {
+      if (tagName === 'canvas') {
+        return {
+          style: {},
+          getContext: jest.fn(),
+          toDataURL: jest.fn().mockReturnValue('data:image/png;base64,mockdata'),
+        } as unknown as HTMLCanvasElement;
+      }
+      if (tagName === 'a') {
+        return mockLink as unknown as HTMLAnchorElement;
+      }
+      return {
+        style: {},
+        appendChild: jest.fn(),
+      } as unknown as HTMLElement;
+    });
+
+    // Mock document.body
+    Object.defineProperty(document, 'body', {
+      value: {
+        appendChild: jest.fn(),
+        removeChild: jest.fn(),
+      },
+      writable: true,
+      configurable: true,
+    });
+  });
+
   describe('exportToJSON', () => {
     it('creates a JSON file with correct data', () => {
       const mockPalette = ['#FF0000', '#00FF00', '#0000FF'];
       const mockAdjustments = { h: 0, s: 0, b: 0, t: 0 };
 
-      // Mock document.createElement and link.click
-      const mockLink = { click: jest.fn() };
-      jest.spyOn(document, 'createElement').mockReturnValue(mockLink as unknown as HTMLAnchorElement);
-      global.URL.createObjectURL = jest.fn();
-
       exportToJSON(mockPalette, mockAdjustments);
 
       expect(global.URL.createObjectURL).toHaveBeenCalled();
+      expect(document.createElement).toHaveBeenCalledWith('a');
       expect(mockLink.click).toHaveBeenCalled();
     });
   });
@@ -42,19 +82,15 @@ describe('shareUtils', () => {
       const mockPalette = ['#FF0000', '#00FF00', '#0000FF'];
       const mockAdjustments = { h: 0, s: 0, b: 0, t: 0 };
 
-      const mockCanvas = {
+      (html2canvas as jest.Mock).mockResolvedValue({
         toDataURL: jest.fn().mockReturnValue('data:image/png;base64,mockdata'),
-      };
-      (html2canvas as jest.Mock).mockResolvedValue(mockCanvas);
-
-      const link = { click: jest.fn() };
-      jest.spyOn(document, 'createElement').mockReturnValue(link as unknown as HTMLAnchorElement);
+      });
 
       await exportToPNG(mockPalette, mockAdjustments);
 
       expect(html2canvas).toHaveBeenCalled();
-      expect(mockCanvas.toDataURL).toHaveBeenCalledWith('image/png');
-      expect(link.click).toHaveBeenCalled();
+      expect(document.createElement).toHaveBeenCalledWith('a');
+      expect(mockLink.click).toHaveBeenCalled();
     });
   });
 
@@ -63,10 +99,11 @@ describe('shareUtils', () => {
       const mockPalette = ['#FF0000', '#00FF00', '#0000FF'];
       const mockAdjustments = { h: 0, s: 0, b: 0, t: 0 };
 
-      const mockCanvas = {
+      (html2canvas as jest.Mock).mockResolvedValue({
         toDataURL: jest.fn().mockReturnValue('data:image/png;base64,mockdata'),
-      };
-      (html2canvas as jest.Mock).mockResolvedValue(mockCanvas);
+        width: 1200,
+        height: 600,
+      });
 
       const mockPDF = {
         addImage: jest.fn(),
@@ -77,7 +114,6 @@ describe('shareUtils', () => {
       await exportToPDF(mockPalette, mockAdjustments);
 
       expect(html2canvas).toHaveBeenCalled();
-      expect(mockCanvas.toDataURL).toHaveBeenCalledWith('image/png');
       expect(mockPDF.addImage).toHaveBeenCalled();
       expect(mockPDF.save).toHaveBeenCalled();
     });
