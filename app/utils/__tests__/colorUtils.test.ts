@@ -1,4 +1,4 @@
-import { hexToRgb, hexToCmyk, getContrastColor } from '../colorUtils';
+import { hexToRgb, hexToCmyk, getContrastColor, generatePalette } from '../colorUtils';
 
 describe('colorUtils', () => {
   describe('hexToRgb', () => {
@@ -41,6 +41,31 @@ describe('colorUtils', () => {
     it('handles edge cases correctly', () => {
       expect(getContrastColor('#808080')).toBe('#FFFFFF'); // Medium gray
       expect(getContrastColor('#909090')).toBe('#000000'); // Slightly lighter than medium gray
+    });
+  });
+
+  describe('generatePalette', () => {
+    it('should generate a palette with default parameters', () => {
+      const result = generatePalette(5, 50, [0, 360]);
+      expect(result).toBeDefined();
+      expect(result.length).toBe(5);
+    });
+
+    it('should generate a palette with different brightness', () => {
+      const result = generatePalette(5, 70, [0, 360]);
+      expect(result).toBeDefined();
+      expect(result.length).toBe(5);
+    });
+
+    it('should generate a palette with different hue range', () => {
+      const result = generatePalette(5, 50, [180, 240]);
+      expect(result).toBeDefined();
+      expect(result.length).toBe(5);
+    });
+
+    it('should handle edge cases', () => {
+      const result = generatePalette(0, 50, [0, 360]);
+      expect(result).toEqual([]);
     });
   });
 });
