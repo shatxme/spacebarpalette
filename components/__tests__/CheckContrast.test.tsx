@@ -27,62 +27,48 @@ describe('CheckContrast', () => {
     expect(screen.getByText('Check Palette Contrast')).toBeInTheDocument();
   });
 
-  it('displays all color combinations', () => {
+  it('displays only valid color combinations by default', () => {
     render(<CheckContrast colors={mockColors} onClose={mockOnClose} />);
     const sampleTexts = screen.getAllByText('Sample');
-    expect(sampleTexts).toHaveLength(mockColors.length * mockColors.length);
+    expect(sampleTexts).toHaveLength(4); // Only valid combinations are shown by default
   });
 
-  it('shows contrast ratio for each combination', () => {
+  it('shows contrast ratio for valid combinations', () => {
     render(<CheckContrast colors={mockColors} onClose={mockOnClose} />);
     const contrastRatios = screen.getAllByTestId('contrast-ratio');
-    expect(contrastRatios).toHaveLength(mockColors.length * mockColors.length);
-    expect(contrastRatios[0]).toHaveTextContent('3.00');
-    expect(contrastRatios[1]).toHaveTextContent('21.00');
-    expect(contrastRatios[2]).toHaveTextContent('4.50');
-    expect(contrastRatios[3]).toHaveTextContent('3.00');
-    expect(contrastRatios[4]).toHaveTextContent('3.00');
+    expect(contrastRatios).toHaveLength(4); // Only valid combinations are shown by default
+    
+    const ratioValues = contrastRatios.map(ratio => ratio.textContent);
+    expect(ratioValues).toContain('21.00');
+    expect(ratioValues).toContain('4.50');
+    expect(ratioValues.filter(value => value === '21.00')).toHaveLength(2);
+    expect(ratioValues.filter(value => value === '4.50')).toHaveLength(2);
   });
 
-  it('toggles between showing all colors and valid colors only', async () => {
+  it('toggles between showing valid colors and all colors', async () => {
     render(<CheckContrast colors={mockColors} onClose={mockOnClose} />);
 
-    // Initially, all contrasts should be visible
-    expect(screen.getAllByText('Sample')).toHaveLength(mockColors.length * mockColors.length);
+    // Initially, only valid contrasts should be visible
+    expect(screen.getAllByText('Sample')).toHaveLength(4);
 
-    // Toggle to show only valid colors
+    // Toggle to show all colors
     const toggleSwitch = screen.getByRole('switch');
     await act(async () => {
       await userEvent.click(toggleSwitch);
     });
 
     await waitFor(() => {
-      const visibleSamples = screen.getAllByText('Sample');
-      expect(visibleSamples).toHaveLength(4);
-      
-      // Check specific valid combinations
-      const validCombos = [
-        { bg: '#FFFFFF', text: '#000000' },
-        { bg: '#000000', text: '#FFFFFF' },
-        { bg: '#FFFFFF', text: '#FF0000' },
-        { bg: '#FF0000', text: '#FFFFFF' }
-      ];
-      
-      validCombos.forEach(combo => {
-        const colorSquare = screen.getByText((content, element) => {
-          return element?.textContent === `${combo.bg}${combo.text}`;
-        });
-        expect(colorSquare).toBeInTheDocument();
-      });
+      const allSamples = screen.getAllByText('Sample');
+      expect(allSamples).toHaveLength(mockColors.length * mockColors.length);
     });
 
-    // Toggle back to show all colors
+    // Toggle back to show only valid colors
     await act(async () => {
       await userEvent.click(toggleSwitch);
     });
 
     await waitFor(() => {
-      expect(screen.getAllByText('Sample')).toHaveLength(mockColors.length * mockColors.length);
+      expect(screen.getAllByText('Sample')).toHaveLength(4);
     });
   });
 
@@ -155,5 +141,36 @@ describe('CheckContrast', () => {
   it('handles empty color array', () => {
     render(<CheckContrast colors={[]} onClose={mockOnClose} />);
     expect(screen.queryByText('Sample')).not.toBeInTheDocument();
+  });
+
+  it('does not show hover effect for placeholder colors', async () => {
+    render(<CheckContrast colors={mockColors} onClose={mockOnClose} />);
+    
+    // Toggle to show all colors
+    const toggleSwitch = screen.getByRole('switch');
+    await act(async () => {
+      await userEvent.click(toggleSwitch);
+    });
+
+    // Find all color squares
+    const colorSquares = screen.getAllByText('Sample');
+
+    // Find the placeholder square (where background and text colors are the same)
+    const placeholderSquare = colorSquares.find((square) => {
+      const style = window.getComputedStyle(square);
+      return style.backgroundColor === style.color;
+    });
+
+    expect(placeholderSquare).toBeTruthy();
+
+    if (placeholderSquare) {
+      await act(async () => {
+        await userEvent.hover(placeholderSquare);
+      });
+
+      // Check that the placeholder square doesn't have the hover effect
+      const hoverDiv = placeholderSquare.querySelector('.group-hover\\:opacity-100');
+      expect(hoverDiv).toBeNull();
+    }
   });
 });

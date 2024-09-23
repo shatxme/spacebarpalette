@@ -8,7 +8,7 @@ interface ContrastCheckModalProps {
 }
 
 const ContrastCheckModal: React.FC<ContrastCheckModalProps> = ({ colors, onClose }) => {
-  const [showValidOnly, setShowValidOnly] = useState(false);
+  const [showValidOnly, setShowValidOnly] = useState(true); // Changed to true
   const [copiedColor, setCopiedColor] = useState<{ color: string; type: 'background' | 'text' } | null>(null);
   const modalRef = useRef<HTMLDivElement>(null);
 
@@ -66,24 +66,27 @@ const ContrastCheckModal: React.FC<ContrastCheckModalProps> = ({ colors, onClose
                   const contrast = calculateContrast(bgColor, textColor);
                   const isValid = contrast >= 4.5;
                   if (showValidOnly && !isValid) return null;
+                  const isPlaceholder = i === j;
                   return (
                     <div
                       key={`${i}-${j}`}
-                      className="aspect-square flex flex-col justify-center items-center p-2 cursor-pointer relative group rounded-md overflow-hidden"
+                      className={`aspect-square flex flex-col justify-center items-center p-2 ${isPlaceholder ? '' : 'cursor-pointer relative group'} rounded-md overflow-hidden`}
                       style={{ backgroundColor: bgColor, color: textColor }}
                     >
-                      <div className="flex flex-col justify-center items-center group-hover:opacity-0 transition-opacity duration-200">
+                      <div className={`flex flex-col justify-center items-center ${isPlaceholder ? '' : 'group-hover:opacity-0'} transition-opacity duration-200`}>
                         <span className="text-base font-semibold">Sample</span>
                         <span className="text-sm font-medium mt-1" data-testid="contrast-ratio">{contrast.toFixed(2)}</span>
                       </div>
-                      <div className="absolute inset-0 flex flex-col justify-center items-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-black bg-opacity-50">
-                        <div className="text-sm font-medium hover:underline text-white" onClick={() => copyToClipboard(bgColor, 'background')}>
-                          {bgColor}
+                      {!isPlaceholder && (
+                        <div className="absolute inset-0 flex flex-col justify-center items-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-black bg-opacity-50">
+                          <div className="text-sm font-medium hover:underline text-white" onClick={() => copyToClipboard(bgColor, 'background')}>
+                            {bgColor}
+                          </div>
+                          <div className="text-sm font-medium hover:underline mt-2 text-white" onClick={() => copyToClipboard(textColor, 'text')}>
+                            {textColor}
+                          </div>
                         </div>
-                        <div className="text-sm font-medium hover:underline mt-2 text-white" onClick={() => copyToClipboard(textColor, 'text')}>
-                          {textColor}
-                        </div>
-                      </div>
+                      )}
                     </div>
                   );
                 })}
