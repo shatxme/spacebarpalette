@@ -163,7 +163,14 @@ describe('ColorPalette', () => {
     expect(colorElements).toHaveLength(mockPalette.length);
   });
 
-  it('initiates drag when dragging starts', () => {
+  it('copies color to clipboard when clicked', async () => {
+    const mockClipboard = {
+      writeText: jest.fn().mockImplementation(() => Promise.resolve()),
+    };
+    Object.assign(navigator, {
+      clipboard: mockClipboard,
+    });
+
     render(
       <ColorPalette
         palette={mockPalette}
@@ -176,66 +183,9 @@ describe('ColorPalette', () => {
       />
     );
 
-    const colorElements = screen.getAllByTestId('color-element');
-    const mockDataTransfer = {
-      setData: jest.fn(),
-      effectAllowed: '',
-    };
+    const colorTexts = screen.getAllByText(/#[0-9A-F]{6}/i);
+    fireEvent.click(colorTexts[0]);
 
-    fireEvent.dragStart(colorElements[0], { dataTransfer: mockDataTransfer });
-
-    expect(mockDataTransfer.setData).toHaveBeenCalledWith('text/plain', '0');
-    expect(mockDataTransfer.effectAllowed).toBe('move');
-    expect(colorElements[0]).toHaveStyle('opacity: 0.5');
-  });
-
-  it('calls onReorder when drop event occurs', () => {
-    render(
-      <ColorPalette
-        palette={mockPalette}
-        lockedColors={mockLockedColors}
-        onToggleLock={mockOnToggleLock}
-        onColorClick={mockOnColorClick}
-        onReorder={mockOnReorder}
-        onAddColumn={mockOnAddColumn}
-        onRemoveColumn={mockOnRemoveColumn}
-      />
-    );
-
-    const colorElements = screen.getAllByTestId('color-element');
-    const mockDataTransfer = {
-      setData: jest.fn(),
-      getData: jest.fn().mockReturnValue('0'),
-    };
-
-    fireEvent.dragStart(colorElements[0], { dataTransfer: mockDataTransfer });
-    fireEvent.drop(colorElements[1], { dataTransfer: mockDataTransfer });
-
-    expect(mockOnReorder).toHaveBeenCalled();
-  });
-
-  it('resets opacity after drag ends', () => {
-    render(
-      <ColorPalette
-        palette={mockPalette}
-        lockedColors={mockLockedColors}
-        onToggleLock={mockOnToggleLock}
-        onColorClick={mockOnColorClick}
-        onReorder={mockOnReorder}
-        onAddColumn={mockOnAddColumn}
-        onRemoveColumn={mockOnRemoveColumn}
-      />
-    );
-
-    const colorElements = screen.getAllByTestId('color-element');
-    const mockDataTransfer = {
-      setData: jest.fn(),
-      effectAllowed: '',
-    };
-
-    fireEvent.dragStart(colorElements[0], { dataTransfer: mockDataTransfer });
-    fireEvent.dragEnd(colorElements[0]);
-
-    expect(colorElements[0]).toHaveStyle('opacity: 1');
+    expect(mockClipboard.writeText).toHaveBeenCalledWith(mockPalette[0]);
   });
 });

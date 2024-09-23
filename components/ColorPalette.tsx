@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef } from 'react';
-import { LockClosedIcon, LockOpenIcon, ClipboardIcon, CheckIcon, MinusIcon, PlusIcon } from '@heroicons/react/24/solid';
+import { LockClosedIcon, LockOpenIcon, ClipboardIcon, CheckIcon, MinusIcon, PlusIcon, XMarkIcon } from '@heroicons/react/24/solid';
 import { getContrastColor } from '../app/utils/colorUtils';
 
 interface ColorPaletteProps {
@@ -12,7 +12,7 @@ interface ColorPaletteProps {
   onRemoveColumn: (index: number) => void;
 }
 
-export default function ColorPalette({ 
+const ColorPalette: React.FC<ColorPaletteProps> = ({ 
   palette, 
   lockedColors, 
   onToggleLock, 
@@ -20,16 +20,19 @@ export default function ColorPalette({
   onReorder,
   onAddColumn,
   onRemoveColumn
-}: ColorPaletteProps) {
+}) => {
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const copyToClipboard = (text: string, index: number) => {
-    navigator.clipboard.writeText(text);
-    setCopiedIndex(index);
-    setTimeout(() => setCopiedIndex(null), 2000);
-  };
+  const copyToClipboard = useCallback((text: string, index: number) => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedIndex(index);
+      setTimeout(() => setCopiedIndex(null), 2000);
+    }).catch(err => {
+      console.error('Failed to copy text: ', err);
+    });
+  }, []);
 
   const handleDragStart = useCallback((e: React.DragEvent<HTMLDivElement>, index: number) => {
     setDraggedIndex(index);
@@ -130,13 +133,19 @@ export default function ColorPalette({
                   copyToClipboard(color, index);
                 }}
               >
-                <p className="text-sm sm:text-lg font-bold" style={{ color: getContrastColor(color) }}>
+                <p 
+                  className="text-base sm:text-xl font-bold tracking-wider" 
+                  style={{ 
+                    color: getContrastColor(color),
+                    letterSpacing: '0.1em'
+                  }}
+                >
                   {color.toUpperCase()}
                 </p>
                 {copiedIndex === index ? (
-                  <CheckIcon className="h-4 w-4 sm:h-5 sm:w-5" style={{ color: getContrastColor(color) }} />
+                  <CheckIcon className="h-5 w-5 sm:h-6 sm:w-6" style={{ color: getContrastColor(color) }} />
                 ) : (
-                  <ClipboardIcon className="h-4 w-4 sm:h-5 sm:w-5" style={{ color: getContrastColor(color) }} />
+                  <ClipboardIcon className="h-5 w-5 sm:h-6 sm:w-6" style={{ color: getContrastColor(color) }} />
                 )}
               </div>
             </div>
@@ -156,4 +165,6 @@ export default function ColorPalette({
       </div>
     </div>
   );
-}
+};
+
+export default ColorPalette;

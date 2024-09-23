@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef, useCallback, Fragment } from 'react
 import ColorPalette from '../components/ColorPalette';
 import ColorDetailsModal from '../components/ColorDetailsModal';
 import ColorAdjustmentSliders from '../components/ColorAdjustmentSliders';
+import ContrastCheckModal from '../components/CheckContrast';
 import { 
   generatePalette, 
   adjustPaletteHSL, 
@@ -11,10 +12,9 @@ import {
   ColorBlindnessType,
   HarmonyStyle
 } from './utils/colorUtils';
-import { PhotoIcon, CodeBracketIcon, ShareIcon, AdjustmentsHorizontalIcon, ChevronDownIcon, SparklesIcon, Bars3Icon, XMarkIcon, DocumentIcon, EyeIcon } from '@heroicons/react/24/outline';
+import { PhotoIcon, CodeBracketIcon, ShareIcon, AdjustmentsHorizontalIcon, ChevronDownIcon, SparklesIcon, Bars3Icon, XMarkIcon, DocumentIcon, EyeIcon, SwatchIcon } from '@heroicons/react/24/outline';
 import { exportToPNG, exportToJSON, sharePalette, exportToPDF } from './utils/shareUtils';
 import { Menu, Transition } from '@headlessui/react';
-import { debounce } from 'lodash';
 import PaletteControls from '../components/PaletteControls';
 
 const Logo = () => (
@@ -54,6 +54,7 @@ export default function Home() {
   const [lastGenerationTime, setLastGenerationTime] = useState(0);
   const cooldownPeriod = 200;
   const [harmonyStyle, setHarmonyStyle] = useState<HarmonyStyle>('complementary');
+  const [showContrastModal, setShowContrastModal] = useState(false);
 
   const generateNewPalette = useCallback(() => {
     console.log('Generating new palette with harmony style:', harmonyStyle);
@@ -210,6 +211,10 @@ export default function Home() {
     setIsShareDropdownOpen(prev => !prev);
   }, []);
 
+  const handleContrastCheck = useCallback(() => {
+    setShowContrastModal(true);
+  }, []);
+
   const menuItems = [
     { 
       icon: ShareIcon, 
@@ -217,14 +222,27 @@ export default function Home() {
       action: handleShareClick,
       dropdown: shareMenuItems 
     },
-    { icon: AdjustmentsHorizontalIcon, label: 'Adjust', action: () => {
-      closeDropdowns();
-      setIsAdjustmentPanelOpen(prev => !prev);
-    }},
-    { icon: EyeIcon, label: 'Color Blindness', action: () => {
-      closeDropdowns();
-      setShowColorBlindness(prev => !prev);
-    }},
+    { 
+      icon: AdjustmentsHorizontalIcon, 
+      label: 'Adjust', 
+      action: () => {
+        closeDropdowns();
+        setIsAdjustmentPanelOpen(prev => !prev);
+      }
+    },
+    { 
+      icon: EyeIcon, 
+      label: 'Color Blindness', 
+      action: () => {
+        closeDropdowns();
+        setShowColorBlindness(!showColorBlindness);
+      }
+    },
+    { 
+      icon: SwatchIcon, 
+      label: 'Check Contrast', 
+      action: handleContrastCheck 
+    }
   ];
 
   const handleAdjustmentsChange = useCallback((newAdjustments: AdjustmentValues) => {
@@ -308,6 +326,10 @@ export default function Home() {
     // Remove focus from any active element
     (document.activeElement as HTMLElement)?.blur();
   };
+
+  const closeContrastModal = useCallback(() => {
+    setShowContrastModal(false);
+  }, []);
 
   return (
     <main ref={mainRef} tabIndex={-1} className="min-h-screen flex flex-col outline-none">
@@ -455,6 +477,12 @@ export default function Home() {
             isOpen={isModalOpen}
             onClose={closeModal}
             onColorChange={handleColorChange}
+          />
+        )}
+        {showContrastModal && (
+          <ContrastCheckModal
+            colors={palette}
+            onClose={closeContrastModal}
           />
         )}
         {isAdjustmentPanelOpen && (
