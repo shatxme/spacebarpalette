@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import Home from '../page';
 
 // Mock the ColorDetailsModal component
@@ -13,6 +13,7 @@ jest.mock('../../components/ColorDetailsModal', () => {
 jest.mock('../utils/colorUtils', () => ({
   ...jest.requireActual('../utils/colorUtils'),
   adjustPaletteHSL: jest.fn((colors) => colors),
+  generatePalette: jest.fn(() => ['#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF']),
 }));
 
 jest.mock('../utils/shareUtils', () => ({
@@ -21,6 +22,8 @@ jest.mock('../utils/shareUtils', () => ({
   exportToPDF: jest.fn(),
   sharePalette: jest.fn(),
 }));
+
+jest.useFakeTimers();
 
 describe('Home', () => {
   beforeEach(() => {
@@ -150,6 +153,96 @@ describe('Home', () => {
     // Verify that the adjustments were still not applied
     expect(adjustPaletteHSL).not.toHaveBeenCalled();
   });
+
+  it('renders PaletteControls with correct initial harmony style', async () => {
+    render(<Home />);
+    await waitFor(() => {
+      expect(screen.getByText('Harmony: Complementary')).toBeInTheDocument();
+    });
+  });
+
+  it('changes harmony style when a new option is selected', async () => {
+    render(<Home />);
+    
+    // Open harmony style dropdown
+    await waitFor(() => {
+      fireEvent.click(screen.getByText(/Harmony:/));
+    });
+
+    // Select a new harmony style
+    fireEvent.click(screen.getByText('Analogous'));
+
+    // Check if the harmony style has been updated
+    await waitFor(() => {
+      expect(screen.getByText('Harmony: Analogous')).toBeInTheDocument();
+    });
+  });
+
+  it('generates a new palette with selected harmony style', async () => {
+    const { generatePalette } = require('../utils/colorUtils');
+    generatePalette.mockClear();
+    generatePalette.mockImplementation((
+      count: number,
+      brightness: number,
+      hueRange: number,
+      currentPalette: string[],
+      lockedColors: boolean[],
+      harmonyStyle: string
+    ) => {
+      console.log('generatePalette called with harmony style:', harmonyStyle);
+      return ['#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF'];
+    });
+
+    console.log('Rendering Home component');
+    const { rerender } = render(<Home />);
+  
+    console.log('Waiting for Harmony button to be available');
+    await waitFor(() => {
+      expect(screen.getByText(/Harmony:/)).toBeInTheDocument();
+    });
+
+    console.log('Clicking Harmony button');
+    fireEvent.click(screen.getByText(/Harmony:/));
+
+    console.log('Waiting for Triadic option to be available');
+    await waitFor(() => {
+      expect(screen.getByText('Triadic')).toBeInTheDocument();
+    });
+
+    console.log('Clicking Triadic option');
+    fireEvent.click(screen.getByText('Triadic'));
+
+    console.log('Waiting for Harmony style to update');
+    await waitFor(() => {
+      expect(screen.getByText('Harmony: Triadic')).toBeInTheDocument();
+    });
+
+    // Force a re-render to ensure the state is updated
+    rerender(<Home />);
+
+    // Clear previous calls to generatePalette
+    generatePalette.mockClear();
+
+    console.log('Generating new palette');
+    fireEvent.keyDown(document, { code: 'Space' });
+
+    // Run all timers to bypass debounce
+    act(() => {
+      jest.runAllTimers();
+    });
+
+    console.log('Waiting for generatePalette to be called');
+    await waitFor(() => {
+      expect(generatePalette).toHaveBeenCalled();
+    }, { timeout: 5000 });
+
+    console.log('Checking generatePalette arguments');
+    const lastCall = generatePalette.mock.calls[generatePalette.mock.calls.length - 1];
+    console.log('Last call harmony style:', lastCall[5]);
+    expect(lastCall[5]).toBe('triadic');
+
+    console.log('Test completed');
+  }, 15000);
 
   // Remove the palette reordering test as it's causing issues in the test environment
 });

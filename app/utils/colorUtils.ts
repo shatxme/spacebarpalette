@@ -98,12 +98,15 @@ function ensureSufficientContrast(palette: string[]): string[] {
   return palette;
 }
 
+export type HarmonyStyle = 'complementary' | 'analogous' | 'triadic' | 'split-complementary' | 'random';
+
 export function generatePalette(
   count: number,
   brightness: number,
   hueRange: [number, number],
   currentPalette: string[] = [],
-  lockedColors: boolean[] = []
+  lockedColors: boolean[] = [],
+  harmonyStyle: HarmonyStyle = 'complementary'
 ): string[] {
   if (count === 1) {
     const [minHue, maxHue] = hueRange;
@@ -136,24 +139,26 @@ export function generatePalette(
     return { h: hue, s: saturation, l: lightness };
   };
 
-  // Use golden ratio to determine the base hue
   let baseHue = getRandomInt(minHue, maxHue);
   baseHue = (baseHue + GOLDEN_RATIO * 360) % 360;
 
-  const harmonyType = getRandomInt(0, 3); // Randomly select a harmony type
-
   let harmonicHues: number[];
-  switch (harmonyType) {
-    case 0: // Complementary
+  if (harmonyStyle === 'random') {
+    const styles: HarmonyStyle[] = ['complementary', 'analogous', 'triadic', 'split-complementary'];
+    harmonyStyle = styles[Math.floor(Math.random() * styles.length)];
+  }
+
+  switch (harmonyStyle) {
+    case 'complementary':
       harmonicHues = [baseHue, getComplementaryHue(baseHue)];
       break;
-    case 1: // Analogous
+    case 'analogous':
       harmonicHues = [baseHue, ...getAnalogousHues(baseHue)];
       break;
-    case 2: // Triadic
+    case 'triadic':
       harmonicHues = [baseHue, ...getTriadicHues(baseHue)];
       break;
-    case 3: // Split-complementary
+    case 'split-complementary':
       harmonicHues = [baseHue, ...getSplitComplementaryHues(baseHue)];
       break;
     default:

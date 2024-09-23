@@ -8,12 +8,14 @@ import {
   adjustPaletteHSL, 
   AdjustmentValues, 
   simulatePaletteColorBlindness,
-  ColorBlindnessType
+  ColorBlindnessType,
+  HarmonyStyle
 } from './utils/colorUtils';
 import { PhotoIcon, CodeBracketIcon, ShareIcon, AdjustmentsHorizontalIcon, ChevronDownIcon, SparklesIcon, Bars3Icon, XMarkIcon, DocumentIcon, EyeIcon } from '@heroicons/react/24/outline';
 import { exportToPNG, exportToJSON, sharePalette, exportToPDF } from './utils/shareUtils';
 import { Menu, Transition } from '@headlessui/react';
 import { debounce } from 'lodash';
+import PaletteControls from '../components/PaletteControls';
 
 const Logo = () => (
   <div className="flex items-center space-x-3">
@@ -50,27 +52,24 @@ export default function Home() {
   const mainRef = useRef<HTMLElement>(null);
   const [colorItems, setColorItems] = useState<ColorItem[]>([]);
   const [lastGenerationTime, setLastGenerationTime] = useState(0);
-  const cooldownPeriod = 200; // 200ms cooldown
+  const cooldownPeriod = 200;
+  const [harmonyStyle, setHarmonyStyle] = useState<HarmonyStyle>('complementary');
 
   const generateNewPalette = useCallback(() => {
+    console.log('Generating new palette with harmony style:', harmonyStyle);
     const currentTime = Date.now();
     if (currentTime - lastGenerationTime < cooldownPeriod) {
-      return; // Don't generate if we're still in the cooldown period
+      return;
     }
-
-    console.log('Generating new palette');
-    console.log('Current palette:', palette);
-    console.log('Locked colors:', lockedColors);
 
     const newPalette = generatePalette(
       palette.length || 5,
       50,
       [0, 360],
       palette,
-      lockedColors
+      lockedColors,
+      harmonyStyle
     );
-
-    console.log('New palette before adjustments:', newPalette);
 
     const adjustedPalette = newPalette.map((color, index) => {
       if (lockedColors[index]) {
@@ -80,18 +79,20 @@ export default function Home() {
       }
     });
 
-    console.log('Adjusted palette:', adjustedPalette);
-
     setPalette(adjustedPalette);
     setColorItems(adjustedPalette.map((color, index) => ({
       color,
       isLocked: lockedColors[index],
-      id: `${color}-${index}-${Date.now()}` // Add a timestamp to ensure unique IDs
+      id: `${color}-${index}-${Date.now()}`
     })));
     setIsShareDropdownOpen(false);
     mainRef.current?.focus();
     setLastGenerationTime(currentTime);
-  }, [lockedColors, palette, adjustments, lastGenerationTime]);
+  }, [lockedColors, palette, adjustments, lastGenerationTime, harmonyStyle]);
+
+  useEffect(() => {
+    localStorage.setItem('harmonyStyle', harmonyStyle);
+  }, [harmonyStyle]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -104,6 +105,9 @@ export default function Home() {
         if (state.adjustments) {
           setAdjustments(state.adjustments);
         }
+        if (state.harmonyStyle) {
+          setHarmonyStyle(state.harmonyStyle);
+        }
         setColorItems(state.palette.map((color: string, index: number) => ({
           color,
           isLocked: state.lockedColors[index],
@@ -113,8 +117,14 @@ export default function Home() {
         console.error('Failed to parse shared state:', error);
         generateNewPalette();
       }
-    } else if (palette.length === 0) {
-      generateNewPalette();
+    } else {
+      const savedHarmonyStyle = localStorage.getItem('harmonyStyle') as HarmonyStyle | null;
+      if (savedHarmonyStyle) {
+        setHarmonyStyle(savedHarmonyStyle);
+      }
+      if (palette.length === 0) {
+        generateNewPalette();
+      }
     }
     setIsLoading(false);
   }, []);
@@ -150,10 +160,7 @@ export default function Home() {
 
   const getSimulatedPalette = useCallback(() => {
     if (showColorBlindness) {
-      console.log('Simulating color blindness:', colorBlindnessType);
       const simulatedPalette = simulatePaletteColorBlindness(palette, colorBlindnessType);
-      console.log('Original palette:', palette);
-      console.log('Simulated palette:', simulatedPalette);
       return simulatedPalette;
     }
     return palette;
@@ -198,11 +205,16 @@ export default function Home() {
     { label: 'Copy Link', action: handleSharePalette, icon: ShareIcon },
   ];
 
+  const handleShareClick = useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    setIsShareDropdownOpen(prev => !prev);
+  }, []);
+
   const menuItems = [
     { 
       icon: ShareIcon, 
       label: 'Share', 
-      action: () => {}, 
+      action: handleShareClick,
       dropdown: shareMenuItems 
     },
     { icon: AdjustmentsHorizontalIcon, label: 'Adjust', action: () => {
@@ -219,15 +231,9 @@ export default function Home() {
     setAdjustments(newAdjustments);
   }, []);
 
-  const handleShareClick = useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
-    event.preventDefault();
-    setIsShareDropdownOpen(prev => !prev);
-  }, []);
-
   const handleKeyDown = useCallback((event: KeyboardEvent) => {
     if (event.code === 'Space' && !isModalOpen) {
       event.preventDefault();
-      console.log('Spacebar pressed');
       if (isShareDropdownOpen) {
         setIsShareDropdownOpen(false);
       }
@@ -243,7 +249,6 @@ export default function Home() {
   }, [handleKeyDown]);
 
   const handleReorder = useCallback((newPalette: string[], newLockedColors: boolean[]) => {
-    console.log('Reordering:', newPalette, newLockedColors);
     setPalette(newPalette);
     setLockedColors(newLockedColors);
     setColorItems(newPalette.map((color, index) => ({
@@ -254,7 +259,6 @@ export default function Home() {
   }, []);
 
   const handleToggleLock = useCallback((index: number) => {
-    console.log('Toggling lock:', index);
     setLockedColors(prev => {
       const newLockedColors = [...prev];
       newLockedColors[index] = !newLockedColors[index];
@@ -299,6 +303,12 @@ export default function Home() {
     }
   }, [palette.length]);
 
+  const handleHarmonyStyleChange = (style: HarmonyStyle) => {
+    setHarmonyStyle(style);
+    // Remove focus from any active element
+    (document.activeElement as HTMLElement)?.blur();
+  };
+
   return (
     <main ref={mainRef} tabIndex={-1} className="min-h-screen flex flex-col outline-none">
       <header className="bg-white shadow-sm p-4">
@@ -310,52 +320,48 @@ export default function Home() {
                 {item.dropdown ? (
                   <div className="relative z-50">
                     <Menu as="div" className="relative inline-block text-left">
-                      {() => (
-                        <>
-                          <Menu.Button 
-                            className="flex items-center space-x-1 p-2 hover:bg-gray-100 rounded"
-                            onClick={handleShareClick}
-                          >
-                            <item.icon className="h-5 w-5 text-gray-600" />
-                            <span className="text-sm text-gray-600">{item.label}</span>
-                            <ChevronDownIcon className="h-4 w-4 text-gray-600" />
-                          </Menu.Button>
-                          <Transition
-                            show={isShareDropdownOpen}
-                            as={Fragment}
-                            enter="transition ease-out duration-100"
-                            enterFrom="transform opacity-0 scale-95"
-                            enterTo="transform opacity-100 scale-100"
-                            leave="transition ease-in duration-75"
-                            leaveFrom="transform opacity-100 scale-100"
-                            leaveTo="transform opacity-0 scale-95"
-                          >
-                            <Menu.Items
-                              static
-                              className="absolute right-0 mt-2 w-56 origin-top-right divide-y divide-gray-100 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50"
-                            >
-                              {shareMenuItems.map((subItem, subIndex) => (
-                                <Menu.Item key={subIndex}>
-                                  {({ active }) => (
-                                    <button
-                                      className={`${
-                                        active ? 'bg-gray-100 text-gray-900' : 'text-gray-700'
-                                      } group flex w-full items-center px-2 py-2 text-sm`}
-                                      onClick={(event) => {
-                                        subItem.action(event);
-                                        setIsShareDropdownOpen(false);
-                                      }}
-                                    >
-                                      <subItem.icon className="mr-2 h-5 w-5" aria-hidden="true" />
-                                      {subItem.label}
-                                    </button>
-                                  )}
-                                </Menu.Item>
-                              ))}
-                            </Menu.Items>
-                          </Transition>
-                        </>
-                      )}
+                      <Menu.Button
+                        className="flex items-center space-x-1 p-2 hover:bg-gray-100 rounded"
+                        onClick={item.action}
+                      >
+                        <item.icon className="h-5 w-5 text-gray-600" />
+                        <span className="text-sm text-gray-600">{item.label}</span>
+                        <ChevronDownIcon className="h-4 w-4 text-gray-600" />
+                      </Menu.Button>
+                      <Transition
+                        show={isShareDropdownOpen}
+                        as={Fragment}
+                        enter="transition ease-out duration-100"
+                        enterFrom="transform opacity-0 scale-95"
+                        enterTo="transform opacity-100 scale-100"
+                        leave="transition ease-in duration-75"
+                        leaveFrom="transform opacity-100 scale-100"
+                        leaveTo="transform opacity-0 scale-95"
+                      >
+                        <Menu.Items
+                          static
+                          className="absolute right-0 mt-2 w-56 origin-top-right divide-y divide-gray-100 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50"
+                        >
+                          {item.dropdown.map((subItem, subIndex) => (
+                            <Menu.Item key={subIndex}>
+                              {({ active }) => (
+                                <button
+                                  className={`${
+                                    active ? 'bg-gray-100 text-gray-900' : 'text-gray-700'
+                                  } group flex w-full items-center px-2 py-2 text-sm`}
+                                  onClick={(event) => {
+                                    subItem.action(event);
+                                    setIsShareDropdownOpen(false);
+                                  }}
+                                >
+                                  <subItem.icon className="mr-2 h-5 w-5" aria-hidden="true" />
+                                  {subItem.label}
+                                </button>
+                              )}
+                            </Menu.Item>
+                          ))}
+                        </Menu.Items>
+                      </Transition>
                     </Menu>
                   </div>
                 ) : (
@@ -371,6 +377,10 @@ export default function Home() {
                 )}
               </React.Fragment>
             ))}
+            <PaletteControls
+              harmonyStyle={harmonyStyle}
+              onHarmonyStyleChange={handleHarmonyStyleChange}
+            />
           </div>
           <button 
             className="sm:hidden"
