@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, fireEvent, screen } from '@testing-library/react';
+import { render, fireEvent, screen, act } from '@testing-library/react';
 import ColorPalette from '../ColorPalette';
 
 describe('ColorPalette', () => {
@@ -13,6 +13,12 @@ describe('ColorPalette', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    // Mock the clipboard API
+    Object.assign(navigator, {
+      clipboard: {
+        writeText: jest.fn().mockResolvedValue(undefined),
+      },
+    });
   });
 
   it('renders all colors in the palette', () => {
@@ -163,14 +169,7 @@ describe('ColorPalette', () => {
     expect(colorElements).toHaveLength(mockPalette.length);
   });
 
-  it('copies color to clipboard when clicked', async () => {
-    const mockClipboard = {
-      writeText: jest.fn().mockImplementation(() => Promise.resolve()),
-    };
-    Object.assign(navigator, {
-      clipboard: mockClipboard,
-    });
-
+  it('copies color to clipboard', async () => {
     render(
       <ColorPalette
         palette={mockPalette}
@@ -183,9 +182,12 @@ describe('ColorPalette', () => {
       />
     );
 
-    const colorTexts = screen.getAllByText(/#[0-9A-F]{6}/i);
-    fireEvent.click(colorTexts[0]);
+    const colorElement = screen.getByText('#FF0000'); // Use a color from the mockPalette
+    await act(async () => {
+      fireEvent.click(colorElement);
+    });
 
-    expect(mockClipboard.writeText).toHaveBeenCalledWith(mockPalette[0]);
+    // Log the clipboard write call
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith('#FF0000');
   });
 });
