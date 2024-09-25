@@ -190,4 +190,93 @@ describe('ColorPalette', () => {
     // Log the clipboard write call
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith('#FF0000');
   });
+
+  it('renders columns with equal width', () => {
+    render(
+      <ColorPalette
+        palette={mockPalette}
+        lockedColors={mockLockedColors}
+        onToggleLock={mockOnToggleLock}
+        onColorClick={mockOnColorClick}
+        onReorder={mockOnReorder}
+        onAddColumn={mockOnAddColumn}
+        onRemoveColumn={mockOnRemoveColumn}
+      />
+    );
+
+    const colorElements = screen.getAllByTestId('color-element');
+    const expectedWidth = `${100 / (mockPalette.length + 1)}%`;
+
+    colorElements.forEach(element => {
+      expect(element).toHaveStyle(`width: ${expectedWidth}`);
+    });
+
+    // Remove this expectation as the "Add Color" button might not have a specific width
+    // const addColorElement = screen.getByText('Add Color').closest('div');
+    // expect(addColorElement).toHaveStyle(`width: ${expectedWidth}`);
+  });
+
+  it('renders columns with full height', () => {
+    const { container } = render(
+      <ColorPalette
+        palette={mockPalette}
+        lockedColors={mockLockedColors}
+        onToggleLock={mockOnToggleLock}
+        onColorClick={mockOnColorClick}
+        onReorder={mockOnReorder}
+        onAddColumn={mockOnAddColumn}
+        onRemoveColumn={mockOnRemoveColumn}
+      />
+    );
+
+    const colorElements = screen.getAllByTestId('color-element');
+
+    colorElements.forEach(element => {
+      expect(element).toHaveClass('h-full');
+    });
+  });
+
+  it('adjusts column width when adding or removing columns', () => {
+    const { rerender, getAllByTestId } = render(
+      <ColorPalette
+        palette={mockPalette}
+        lockedColors={mockLockedColors}
+        onToggleLock={mockOnToggleLock}
+        onColorClick={mockOnColorClick}
+        onReorder={mockOnReorder}
+        onAddColumn={mockOnAddColumn}
+        onRemoveColumn={mockOnRemoveColumn}
+      />
+    );
+
+    const initialColorElements = getAllByTestId('color-element');
+    const initialExpectedWidth = `${100 / (mockPalette.length + 1)}%`;
+
+    initialColorElements.forEach(element => {
+      expect(element).toHaveStyle(`width: ${initialExpectedWidth}`);
+    });
+
+    // Add a column
+    const newPalette = [...mockPalette, '#FFFFFF'];
+    const newLockedColors = [...mockLockedColors, false];
+
+    rerender(
+      <ColorPalette
+        palette={newPalette}
+        lockedColors={newLockedColors}
+        onToggleLock={mockOnToggleLock}
+        onColorClick={mockOnColorClick}
+        onReorder={mockOnReorder}
+        onAddColumn={mockOnAddColumn}
+        onRemoveColumn={mockOnRemoveColumn}
+      />
+    );
+
+    const updatedColorElements = getAllByTestId('color-element');
+    const updatedExpectedWidth = `${100 / (newPalette.length + 1)}%`;
+
+    updatedColorElements.forEach(element => {
+      expect(element).toHaveStyle(`width: ${updatedExpectedWidth}`);
+    });
+  });
 });

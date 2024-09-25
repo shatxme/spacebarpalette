@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef } from 'react';
-import { LockClosedIcon, LockOpenIcon, ClipboardIcon, CheckIcon, MinusIcon, PlusIcon, XMarkIcon } from '@heroicons/react/24/solid';
+import { LockClosedIcon, LockOpenIcon, ClipboardIcon, CheckIcon, MinusIcon, PlusIcon } from '@heroicons/react/24/solid';
 import { getContrastColor } from '../app/utils/colorUtils';
 
 interface ColorPaletteProps {
@@ -7,7 +7,7 @@ interface ColorPaletteProps {
   lockedColors: boolean[];
   onToggleLock: (index: number) => void;
   onColorClick: (color: string) => void;
-  onReorder: (newPalette: string[], newLockedColors: boolean[]) => void;
+  onReorder: (startIndex: number, endIndex: number) => void;
   onAddColumn: () => void;
   onRemoveColumn: (index: number) => void;
 }
@@ -54,14 +54,7 @@ const ColorPalette: React.FC<ColorPaletteProps> = ({
     const sourceIndex = parseInt(e.dataTransfer.getData('text/plain'), 10);
     
     if (sourceIndex !== targetIndex && sourceIndex >= 0 && sourceIndex < palette.length) {
-      const newPalette = [...palette];
-      const newLockedColors = [...lockedColors];
-      const [movedColor] = newPalette.splice(sourceIndex, 1);
-      const [movedLock] = newLockedColors.splice(sourceIndex, 1);
-      newPalette.splice(targetIndex, 0, movedColor);
-      newLockedColors.splice(targetIndex, 0, movedLock);
-
-      onReorder(newPalette, newLockedColors);
+      onReorder(sourceIndex, targetIndex);
     }
     setDraggedIndex(null);
   }, [palette, lockedColors, onReorder]);
@@ -77,15 +70,23 @@ const ColorPalette: React.FC<ColorPaletteProps> = ({
     onToggleLock(index);
   }, [onToggleLock]);
 
+  const totalColumns = palette.length < 10 ? palette.length + 1 : palette.length;
+  const columnWidth = `${100 / totalColumns}%`;
+
   return (
-    <div className="flex-1 flex flex-col">
-      <div id="color-palette" ref={containerRef} className="flex-1 flex flex-wrap relative">
+    <div className="flex-1 flex flex-col h-full" data-testid="color-palette-container">
+      <div id="color-palette" ref={containerRef} className="flex-1 flex relative h-full">
         {palette.map((color, index) => (
           <div
             key={`${color}-${index}`}
             data-testid="color-element"
-            className="flex-1 flex flex-col justify-between cursor-move relative min-h-[120px]"
-            style={{ backgroundColor: color }}
+            className="flex flex-col justify-between cursor-move relative h-full"
+            style={{ 
+              backgroundColor: color, 
+              width: columnWidth,
+              flexShrink: 0,
+              flexGrow: 1
+            }}
             onClick={(e) => {
               e.preventDefault();
               onColorClick(color);
@@ -153,7 +154,13 @@ const ColorPalette: React.FC<ColorPaletteProps> = ({
         ))}
         {palette.length < 10 && (
           <div 
-            className="flex-1 flex items-center justify-center bg-gray-100 min-h-[120px] cursor-pointer transition-all duration-300 ease-in-out hover:bg-gray-200"
+            data-testid="add-color-button"
+            className="flex flex-col items-center justify-center bg-gray-100 cursor-pointer transition-all duration-300 ease-in-out hover:bg-gray-200"
+            style={{ 
+              width: columnWidth,
+              flexShrink: 0,
+              flexGrow: 1
+            }}
             onClick={onAddColumn}
           >
             <div className="flex flex-col items-center text-gray-600 group">

@@ -139,8 +139,10 @@ export default function Home() {
   }, []);
 
   const handleColorClick = useCallback((color: string) => {
+    console.log('Color clicked:', color);
     setSelectedColor(color);
     setIsModalOpen(true);
+    console.log('Modal should be open now, isModalOpen:', isModalOpen);
   }, []);
 
   const closeModal = useCallback(() => {
@@ -266,7 +268,14 @@ export default function Home() {
     };
   }, [handleKeyDown]);
 
-  const handleReorder = useCallback((newPalette: string[], newLockedColors: boolean[]) => {
+  const handleReorder = useCallback((startIndex: number, endIndex: number) => {
+    const newPalette = [...palette];
+    const newLockedColors = [...lockedColors];
+    const [movedColor] = newPalette.splice(startIndex, 1);
+    const [movedLock] = newLockedColors.splice(startIndex, 1);
+    newPalette.splice(endIndex, 0, movedColor);
+    newLockedColors.splice(endIndex, 0, movedLock);
+
     setPalette(newPalette);
     setLockedColors(newLockedColors);
     setColorItems(newPalette.map((color, index) => ({
@@ -274,7 +283,7 @@ export default function Home() {
       isLocked: newLockedColors[index],
       id: `${color}-${index}-${Date.now()}`
     })));
-  }, []);
+  }, [palette, lockedColors]);
 
   const handleToggleLock = useCallback((index: number) => {
     setLockedColors(prev => {
@@ -456,11 +465,12 @@ export default function Home() {
       )}
 
       <div className="flex-grow flex flex-col sm:flex-row">
-        {isLoading ? (
-          <div className="flex items-center justify-center h-full">
-            <p className="text-gray-500">Loading...</p>
-          </div>
-        ) : (
+        <div className="w-full max-w-[1680px] mx-auto flex-grow flex flex-col">
+          {isLoading && (
+            <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75 z-50">
+              <p className="text-gray-500">Loading...</p>
+            </div>
+          )}
           <ColorPalette
             palette={getSimulatedPalette()}
             lockedColors={colorItems.map(item => item.isLocked)}
@@ -470,12 +480,15 @@ export default function Home() {
             onAddColumn={handleAddColumn}
             onRemoveColumn={handleRemoveColumn}
           />
-        )}
+        </div>
         {selectedColor && (
           <ColorDetailsModal 
             color={selectedColor}
             isOpen={isModalOpen}
-            onClose={closeModal}
+            onClose={() => {
+              setIsModalOpen(false);
+              console.log('Modal closed, isModalOpen:', isModalOpen);
+            }}
             onColorChange={handleColorChange}
           />
         )}
