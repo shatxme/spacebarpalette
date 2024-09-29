@@ -70,20 +70,16 @@ const ColorPalette: React.FC<ColorPaletteProps> = ({
     onToggleLock(index);
   }, [onToggleLock]);
 
-  const totalColumns = palette.length < 10 ? palette.length + 1 : palette.length;
-  const columnWidth = `${100 / totalColumns}%`;
-
   return (
     <div className="flex-1 flex flex-col h-full" data-testid="color-palette-container">
-      <div id="color-palette" ref={containerRef} className="flex-1 flex relative h-full">
+      <div id="color-palette" ref={containerRef} className="flex-1 flex flex-col sm:flex-row relative h-full">
         {palette.map((color, index) => (
           <div
             key={`${color}-${index}`}
             data-testid="color-element"
-            className="flex flex-col justify-between cursor-move relative h-full"
+            className="flex flex-row sm:flex-col justify-between cursor-move relative h-24 sm:h-full"
             style={{ 
               backgroundColor: color, 
-              width: columnWidth,
               flexShrink: 0,
               flexGrow: 1
             }}
@@ -97,7 +93,7 @@ const ColorPalette: React.FC<ColorPaletteProps> = ({
             onDrop={(e) => handleDrop(e, index)}
             onDragEnd={handleDragEnd}
           >
-            <div className="flex justify-between items-start p-2">
+            <div className="flex justify-between items-start p-2 w-full sm:w-auto">
               <button
                 className="lock-button p-2 bg-white bg-opacity-20 rounded-full transition-colors duration-200 hover:bg-opacity-30"
                 onClick={(e) => handleToggleLock(e, index)}
@@ -122,7 +118,7 @@ const ColorPalette: React.FC<ColorPaletteProps> = ({
                 </button>
               )}
             </div>
-            <div className="mt-auto p-2 sm:p-4">
+            <div className="p-2 sm:mt-auto sm:p-4">
               <div 
                 className={`flex items-center justify-between p-2 rounded cursor-pointer transition-all duration-200 ${
                   copiedIndex === index 
@@ -155,9 +151,8 @@ const ColorPalette: React.FC<ColorPaletteProps> = ({
         {palette.length < 10 && (
           <div 
             data-testid="add-color-button"
-            className="flex flex-col items-center justify-center bg-gray-100 cursor-pointer transition-all duration-300 ease-in-out hover:bg-gray-200"
+            className="flex flex-col items-center justify-center bg-gray-100 cursor-pointer transition-all duration-300 ease-in-out hover:bg-gray-200 h-24 sm:h-auto"
             style={{ 
-              width: columnWidth,
               flexShrink: 0,
               flexGrow: 1
             }}
